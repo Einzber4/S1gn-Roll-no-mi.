@@ -1,4 +1,4 @@
-# Einzbern Roulette
+# S1gn-Roll-no-mi. Roulette
 
 Decision engine — projetos primeiro, distrações depois.
 
