@@ -1,0 +1,10 @@
+{
+  "name": "Einzbern Roulette",
+  "short_name": "Roleta",
+  "description": "Decision engine — projetos primeiro, distrações depois.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#090b10",
+  "theme_color": "#090b10",
+  "lang": "pt-BR"
+}
