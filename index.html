@@ -1,22 +1,124 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Roleta — Decision Engine</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Roleta — Decision Engine</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
-<main>
-<header><div><h1>ROLETA</h1><p class="sub">Decision engine — projetos primeiro, distrações depois.</p></div><div class="small muted">Persistência local automática</div></header>
-<div class="grid">
-<section class="panel"><h2>Categorias</h2><div id="cats" class="cats"></div><hr style="border:0;border-top:1px solid var(--line);margin:18px 0"><div class="small muted">Ciclo atual</div><div id="progress" style="margin-top:5px"></div></section>
-<section class="panel">
-<div class="row between">
-  <div>
-    <div class="small muted">Categoria selecionada</div>
-    <h2 id="title">Jogos</h2>
-    <div id="count" class="small muted"></div>
-  </div>
-  <button id="resetCycle">↻ Novo ciclo</button>
-</div>
+  <main>
+
+    <header>
+      <div>
+        <h1>ROLETA</h1>
+        <p class="sub">Decision engine — projetos primeiro, distrações depois.</p>
+      </div>
+
+      <div class="small muted">
+        Persistência local automática
+      </div>
+    </header>
+
+    <div class="grid">
+
+      <!-- CATEGORIAS -->
+      <section class="panel">
+        <h2>Categorias</h2>
+
+        <div id="cats" class="cats"></div>
+
+        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+
+        <div class="small muted">Ciclo atual</div>
+        <div id="progress" style="margin-top:5px"></div>
+      </section>
+
+
+      <!-- ROLETAS -->
+      <section class="panel">
+
+        <div class="row between">
+          <div>
+            <div class="small muted">Categoria selecionada</div>
+            <h2 id="title">Jogos</h2>
+            <div id="count" class="small muted"></div>
+          </div>
+
+          <button id="resetCycle">
+            ↻ Novo ciclo
+          </button>
+        </div>
+
+
+        <!-- ADICIONAR OPÇÃO -->
+        <form id="addForm">
+          <input
+            id="newItem"
+            placeholder="Adicionar opção..."
+            autocomplete="off"
+          >
+
+          <button class="primary">
+            + Adicionar
+          </button>
+        </form>
+
+
+        <!-- LISTA -->
+        <div id="list" class="list"></div>
+
+
+        <!-- ROLETA -->
+        <div class="center" style="margin-top:18px">
+
+          <div class="wheel-wrap">
+            <div class="pointer"></div>
+            <div id="wheel" class="wheel"></div>
+          </div>
+
+
+          <!-- GIRAR -->
+          <button
+            id="spin"
+            class="primary"
+            style="font-size:17px;padding:12px 28px"
+          >
+            🎲 GIRAR
+          </button>
+
+
+          <!-- RESULTADO -->
+          <div id="result" class="result">
+            <span class="muted">Nenhum resultado.</span>
+          </div>
+
+
+          <!-- AÇÕES DO RESULTADO -->
+          <div id="resultActions" class="actions hidden">
+
+            <button id="confirm">
+              ✓ Confirmar
+            </button>
+
+            <button id="reject">
+              ↩ Rejeitar
+            </button>
+
+            <button id="cancel">
+              ✕ Cancelar
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
