@@ -21,5 +21,3 @@ Abra `index.html` em um navegador ou utilize o Live Server no VS Code.
 - Sugestões / Projetos
 - Músicas
 - Imagens
-
-Os dados da V1 são persistidos localmente no navegador.
