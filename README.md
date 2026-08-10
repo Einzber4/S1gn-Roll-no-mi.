@@ -12,7 +12,7 @@ Decision engine — projetos primeiro, distrações logo mais.
 
 ## Execução local
 
-Abra `index.html` em um navegador ou utilize o Live Server no VS Code.
+Abra `index.html` em um navegador ou utilize o Live Server no Visual Studio Code.
 
 ## Categorias
 
