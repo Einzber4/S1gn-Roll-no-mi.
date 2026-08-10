@@ -1,4 +1,4 @@
-# S1gn-Roll-no-mi. Roulette
+# S1gn-Roll-no-mi.
 
 Decision engine — projetos primeiro, distrações logo mais.
 
