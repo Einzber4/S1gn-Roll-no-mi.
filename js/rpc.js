@@ -1,546 +1,518 @@
-const net = require("net");
+"use strict";
+
+/*
+==================================================
+ S1GN TOOL NO MI
+ Discord Rich Presence Bridge
+ Security Hardened
+==================================================
+*/
+
 const http = require("http");
-const crypto = require("crypto");
+const RPC = require("discord-rpc");
 
-// ==================================================
-// CONFIGURAÇÃO
-// ==================================================
+/* ==================================================
+   Configuração
+================================================== */
 
-const CLIENT_ID = "1094444539638452304";
+const CLIENT_ID =
+  process.env.DISCORD_CLIENT_ID ||
+  "1094444539638452304";
 
-const HTTP_HOST = "127.0.0.1";
-const HTTP_PORT = 6464;
+const HOST = "127.0.0.1";
+const PORT = 6464;
 
-// ==================================================
-// RICH PRESENCE
-// ==================================================
+/*
+ * Somente origens conhecidas da aplicação.
+ */
+const ALLOWED_ORIGINS = new Set([
+  "http://127.0.0.1:5500",
+  "http://localhost:5500"
+]);
 
-const presence = {
-    type: 0,
+/* ==================================================
+   Limites de segurança
+================================================== */
 
-    details: "Creating The S1gn.",
-    state: "Working on a Project.",
+const MAX_BODY_SIZE = 16 * 1024; // 16 KB
+const MAX_DETAILS_LENGTH = 128;
+const MAX_STATE_LENGTH = 128;
 
-    start: Math.floor(Date.now() / 1000),
+const RATE_WINDOW = 1000;
+const MAX_REQUESTS_PER_WINDOW = 10;
 
-    large_image: "cybersecurity",
-    large_text: "S1gn-Tool-No-Mi.",
+let requestCount = 0;
+let requestWindowStart = Date.now();
 
-    small_image: "sandrone",
-    small_text: "Einzbern"
-};
+/* ==================================================
+   Discord RPC
+================================================== */
 
-// ==================================================
-// ESTADO DA CONEXÃO
-// ==================================================
+let rpc = null;
+let rpcReady = false;
 
-let socket = null;
-let connected = false;
-let reconnectTimer = null;
+/* ==================================================
+   Rate Limit
+================================================== */
 
-// ==================================================
-// UTILIDADES
-// ==================================================
+function isRateLimited() {
+  const now = Date.now();
 
-function createNonce() {
-    return crypto.randomUUID();
+  if (now - requestWindowStart >= RATE_WINDOW) {
+    requestWindowStart = now;
+    requestCount = 0;
+  }
+
+  requestCount++;
+
+  return requestCount > MAX_REQUESTS_PER_WINDOW;
 }
 
-function sendFrame(opcode, data) {
-    if (!socket || !connected) {
-        console.log("[RPC] Discord não está conectado.");
-        return false;
-    }
+/* ==================================================
+   Origin
+================================================== */
 
-    const payload = Buffer.from(
-        JSON.stringify(data),
-        "utf8"
-    );
+function isAllowedOrigin(req) {
+  const origin = req.headers.origin;
 
-    const header = Buffer.alloc(8);
+  if (!origin) {
+    return false;
+  }
 
-    header.writeUInt32LE(opcode, 0);
-    header.writeUInt32LE(payload.length, 4);
-
-    socket.write(
-        Buffer.concat([
-            header,
-            payload
-        ])
-    );
-
-    return true;
+  return ALLOWED_ORIGINS.has(origin);
 }
 
-// ==================================================
-// ATUALIZAÇÃO DA PRESENCE
-// ==================================================
+/* ==================================================
+   Headers
+================================================== */
 
-function updatePresence() {
-    if (!connected) {
-        console.log(
-            "[RPC] Não foi possível atualizar: Discord desconectado."
+function securityHeaders(origin) {
+  return {
+    "Content-Type":
+      "application/json; charset=utf-8",
+
+    "Cache-Control":
+      "no-store",
+
+    "X-Content-Type-Options":
+      "nosniff",
+
+    "Referrer-Policy":
+      "no-referrer",
+
+    "Content-Security-Policy":
+      "default-src 'none'; frame-ancestors 'none'",
+
+    "Access-Control-Allow-Origin":
+      origin,
+
+    "Access-Control-Allow-Methods":
+      "POST, OPTIONS",
+
+    "Access-Control-Allow-Headers":
+      "Content-Type",
+
+    "Access-Control-Max-Age":
+      "600"
+  };
+}
+
+/* ==================================================
+   Resposta JSON
+================================================== */
+
+function sendJson(
+  res,
+  status,
+  payload,
+  origin = ""
+) {
+  res.writeHead(
+    status,
+    securityHeaders(origin)
+  );
+
+  res.end(
+    JSON.stringify(payload)
+  );
+}
+
+/* ==================================================
+   LIMIT BODY
+================================================== */
+
+/*
+ * Lê o Body manualmente para impedir que um payload
+ * excessivamente grande seja acumulado em memória.
+ *
+ * Limite absoluto: 16 KB.
+ */
+function readLimitedBody(req) {
+  return new Promise((resolve, reject) => {
+
+    let body = "";
+    let size = 0;
+    let finished = false;
+
+    req.setEncoding("utf8");
+
+    req.on("data", chunk => {
+
+      if (finished) {
+        return;
+      }
+
+      const chunkSize =
+        Buffer.byteLength(
+          chunk,
+          "utf8"
         );
 
-        return false;
-    }
-
-    const activity = {
-        type: presence.type,
-
-        details: presence.details,
-        state: presence.state,
-
-        timestamps: {
-            start: presence.start
-        },
-
-        assets: {
-            large_image: presence.large_image,
-            large_text: presence.large_text,
-
-            small_image: presence.small_image,
-            small_text: presence.small_text
-        }
-    };
-
-    const nonce = createNonce();
-
-    console.log("[RPC] Enviando SET_ACTIVITY...");
-    console.log("[RPC] Activity:", activity);
-
-    return sendFrame(1, {
-        cmd: "SET_ACTIVITY",
-        nonce,
-
-        args: {
-            pid: process.pid,
-            activity
-        }
-    });
-}
-
-// ==================================================
-// DESCONECTAR
-// ==================================================
-
-function disconnect() {
-    connected = false;
-
-    if (socket) {
-        socket.destroy();
-        socket = null;
-    }
-}
-
-// ==================================================
-// CONEXÃO IPC COM DISCORD
-// ==================================================
-
-function connectToDiscord(pipeIndex = 0) {
-    if (connected) {
-        return;
-    }
-
-    if (pipeIndex > 9) {
-        console.log(
-            "[RPC] Nenhum pipe IPC do Discord encontrado."
-        );
-
-        scheduleReconnect();
-        return;
-    }
-
-    const pipe =
-        `\\\\?\\pipe\\discord-ipc-${pipeIndex}`;
-
-    console.log(
-        `[RPC] Tentando Discord IPC pipe ${pipeIndex}...`
-    );
-
-    const newSocket = net.createConnection(pipe);
-
-    // ------------------------------------------------
-    // CONEXÃO ESTABELECIDA
-    // ------------------------------------------------
-
-    newSocket.once("connect", () => {
-        socket = newSocket;
-        connected = true;
-
-        console.log(
-            `[RPC] Conectado ao Discord através do pipe ${pipeIndex}.`
-        );
-
-        // HANDSHAKE
-        sendFrame(0, {
-            v: 1,
-            client_id: CLIENT_ID
-        });
-    });
-
-    // ------------------------------------------------
-    // DADOS RECEBIDOS
-    // ------------------------------------------------
-
-    newSocket.on("data", buffer => {
-        if (buffer.length < 8) {
-            return;
-        }
-
-        let offset = 0;
-
-        while (offset + 8 <= buffer.length) {
-            const opcode = buffer.readUInt32LE(offset);
-            const length = buffer.readUInt32LE(offset + 4);
-
-            if (offset + 8 + length > buffer.length) {
-                console.log(
-                    "[RPC] Frame incompleto recebido."
-                );
-
-                break;
-            }
-
-            const rawPayload = buffer
-                .subarray(
-                    offset + 8,
-                    offset + 8 + length
-                )
-                .toString("utf8");
-
-            offset += 8 + length;
-
-            let payload;
-
-            try {
-                payload = JSON.parse(rawPayload);
-            } catch (error) {
-                console.error(
-                    "[RPC] Erro ao interpretar resposta do Discord:"
-                );
-
-                console.error(rawPayload);
-
-                continue;
-            }
-
-            console.log(
-                "[RPC] Resposta recebida:",
-                payload
-            );
-
-            // ----------------------------------------
-            // READY
-            // ----------------------------------------
-
-            if (payload.evt === "READY") {
-                console.log(
-                    "[RPC] Discord confirmou a conexão."
-                );
-
-                updatePresence();
-
-                continue;
-            }
-
-            // ----------------------------------------
-            // ERRO
-            // ----------------------------------------
-
-            if (payload.evt === "ERROR") {
-                console.error(
-                    "[RPC] Discord rejeitou a operação."
-                );
-
-                console.error(
-                    "[RPC] Código:",
-                    payload.data?.code
-                );
-
-                console.error(
-                    "[RPC] Mensagem:",
-                    payload.data?.message
-                );
-
-                continue;
-            }
-
-            // ----------------------------------------
-            // SET_ACTIVITY
-            // ----------------------------------------
-
-            if (payload.cmd === "SET_ACTIVITY") {
-                console.log(
-                    "[RPC] Resposta do SET_ACTIVITY recebida."
-                );
-
-                if (payload.data) {
-                    console.log(
-                        "[RPC] Dados do Discord:",
-                        payload.data
-                    );
-                }
-
-                continue;
-            }
-        }
-    });
-
-    // ------------------------------------------------
-    // FECHAMENTO
-    // ------------------------------------------------
-
-    newSocket.once("close", () => {
-        if (socket === newSocket) {
-            disconnect();
-
-            console.log(
-                "[RPC] Conexão com Discord encerrada."
-            );
-
-            scheduleReconnect();
-        }
-    });
-
-    // ------------------------------------------------
-    // ERRO
-    // ------------------------------------------------
-
-    newSocket.once("error", error => {
-        if (!connected) {
-            console.log(
-                `[RPC] Pipe ${pipeIndex} indisponível.`
-            );
-
-            newSocket.destroy();
-
-            connectToDiscord(pipeIndex + 1);
-        } else {
-            console.error(
-                "[RPC] Erro na conexão:",
-                error.message
-            );
-        }
-    });
-}
-
-// ==================================================
-// RECONEXÃO
-// ==================================================
-
-function scheduleReconnect() {
-    if (reconnectTimer) {
-        return;
-    }
-
-    reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-
-        connectToDiscord(0);
-    }, 5000);
-}
-
-// ==================================================
-// HTTP BRIDGE
-// ==================================================
-
-function sendJson(response, status, data) {
-    response.writeHead(status, {
-        "Content-Type":
-            "application/json; charset=utf-8",
-
-        "Access-Control-Allow-Origin":
-            "*",
-
-        "Access-Control-Allow-Methods":
-            "GET, POST, OPTIONS",
-
-        "Access-Control-Allow-Headers":
-            "Content-Type"
-    });
-
-    response.end(
-        JSON.stringify(data)
-    );
-}
-
-// ==================================================
-// SERVIDOR HTTP
-// ==================================================
-
-const server = http.createServer(
-    (request, response) => {
-
-        // --------------------------------------------
-        // CORS
-        // --------------------------------------------
-
-        if (request.method === "OPTIONS") {
-            sendJson(
-                response,
-                204,
-                {}
-            );
-
-            return;
-        }
-
-        // --------------------------------------------
-        // STATUS
-        // --------------------------------------------
-
-        if (
-            request.method === "GET" &&
-            request.url === "/status"
-        ) {
-            sendJson(
-                response,
-                200,
-                {
-                    connected,
-                    presence
-                }
-            );
-
-            return;
-        }
-
-        // --------------------------------------------
-        // ATUALIZAR PRESENCE
-        // --------------------------------------------
-
-        if (
-            request.method === "POST" &&
-            request.url === "/presence"
-        ) {
-            let body = "";
-
-            request.on(
-                "data",
-                chunk => {
-                    body += chunk;
-                }
-            );
-
-            request.on(
-                "end",
-                () => {
-                    try {
-                        const data =
-                            JSON.parse(body);
-
-                        if (
-                            typeof data.details ===
-                            "string"
-                        ) {
-                            presence.details =
-                                data.details;
-                        }
-
-                        if (
-                            typeof data.state ===
-                            "string"
-                        ) {
-                            presence.state =
-                                data.state;
-                        }
-
-                        if (
-                            typeof data.start ===
-                            "number"
-                        ) {
-                            presence.start =
-                                data.start;
-                        }
-
-                        updatePresence();
-
-                        sendJson(
-                            response,
-                            200,
-                            {
-                                success: true,
-                                connected,
-                                presence
-                            }
-                        );
-
-                    } catch (error) {
-                        sendJson(
-                            response,
-                            400,
-                            {
-                                success: false,
-                                error:
-                                    "JSON inválido."
-                            }
-                        );
-                    }
-                }
-            );
-
-            return;
-        }
-
-        // --------------------------------------------
-        // 404
-        // --------------------------------------------
-
-        sendJson(
-            response,
-            404,
+      size += chunkSize;
+
+      /*
+       * O limite é verificado antes de continuar
+       * acumulando dados.
+       */
+      if (size > MAX_BODY_SIZE) {
+
+        finished = true;
+
+        reject(
+          Object.assign(
+            new Error(
+              "Request body too large."
+            ),
             {
-                success: false,
-                error:
-                    "Endpoint não encontrado."
+              statusCode: 413
             }
+          )
         );
+
+        req.destroy();
+
+        return;
+      }
+
+      body += chunk;
+    });
+
+    req.on("end", () => {
+
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+
+      resolve(body);
+    });
+
+    req.on("error", error => {
+
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+
+      reject(error);
+    });
+
+    req.on("aborted", () => {
+
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+
+      reject(
+        Object.assign(
+          new Error(
+            "Request aborted."
+          ),
+          {
+            statusCode: 400
+          }
+        )
+      );
+    });
+  });
+}
+
+/* ==================================================
+   Validação do Payload
+================================================== */
+
+function validatePresencePayload(body) {
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body)
+  ) {
+    return {
+      valid: false,
+      error: "Payload inválido."
+    };
+  }
+
+  const {
+    details,
+    state
+  } = body;
+
+  /*
+   * Não aceitar propriedades inesperadas.
+   */
+  const allowedKeys = [
+    "details",
+    "state"
+  ];
+
+  for (const key of Object.keys(body)) {
+
+    if (!allowedKeys.includes(key)) {
+
+      return {
+        valid: false,
+        error:
+          "Payload contém propriedades não autorizadas."
+      };
     }
-);
+  }
 
-// ==================================================
-// INICIALIZAÇÃO
-// ==================================================
+  /*
+   * Details
+   */
+  if (
+    typeof details !== "string" ||
+    details.length === 0 ||
+    details.length > MAX_DETAILS_LENGTH
+  ) {
+    return {
+      valid: false,
+      error:
+        "Campo 'details' inválido."
+    };
+  }
 
-server.listen(
-    HTTP_PORT,
-    HTTP_HOST,
+  /*
+   * State
+   */
+  if (
+    state !== undefined &&
+    (
+      typeof state !== "string" ||
+      state.length > MAX_STATE_LENGTH
+    )
+  ) {
+    return {
+      valid: false,
+      error:
+        "Campo 'state' inválido."
+    };
+  }
+
+  return {
+    valid: true,
+    details,
+    state:
+      typeof state === "string"
+        ? state
+        : "Working on a Project."
+  };
+}
+
+/* ==================================================
+   Conectar ao Discord
+================================================== */
+
+async function connectRPC() {
+
+  if (
+    rpcReady &&
+    rpc
+  ) {
+    return;
+  }
+
+  rpc =
+    new RPC.Client({
+      transport: "ipc"
+    });
+
+  rpc.on(
+    "ready",
     () => {
 
-        console.log(
-            `[RPC] Bridge iniciada em ` +
-            `http://${HTTP_HOST}:${HTTP_PORT}`
-        );
+      rpcReady = true;
 
-        console.log(
-            "[RPC] Configuração atual:"
-        );
-
-        console.log(
-            `       Large Image: ${presence.large_image}`
-        );
-
-        console.log(
-            `       Large Text:  ${presence.large_text}`
-        );
-
-        console.log(
-            `       Small Image: ${presence.small_image}`
-        );
-
-        console.log(
-            `       Small Text:  ${presence.small_text}`
-        );
-
-        console.log(
-            `       Details:     ${presence.details}`
-        );
-
-        console.log(
-            `       State:       ${presence.state}`
-        );
-
-        connectToDiscord(0);
+      console.log(
+        "[RPC] Discord IPC conectado."
+      );
     }
-);
+  );
+
+  rpc.on(
+    "disconnected",
+    () => {
+
+      rpcReady = false;
+
+      console.warn(
+        "[RPC] Discord IPC desconectado."
+      );
+    }
+  );
+
+  rpc.on(
+    "error",
+    error => {
+
+      rpcReady = false;
+
+      console.error(
+        "[RPC] Erro:",
+        error.message
+      );
+    }
+  );
+
+  try {
+
+    await rpc.login({
+      clientId: CLIENT_ID
+    });
+
+  } catch (error) {
+
+    rpcReady = false;
+
+    console.error(
+      "[RPC] Falha ao conectar:",
+      error.message
+    );
+
+    throw error;
+  }
+}
+
+/* ==================================================
+   Atualizar Activity
+================================================== */
+
+async function setActivity(
+  details,
+  state
+) {
+
+  await connectRPC();
+
+  if (
+    !rpc ||
+    !rpcReady
+  ) {
+    throw new Error(
+      "Discord RPC indisponível."
+    );
+  }
+
+  await rpc.setActivity({
+
+    details,
+
+    state,
+
+    largeImageKey:
+      "s1gn-tool-no-mi",
+
+    largeImageText:
+      "S1gn-Tool-No-Mi.",
+
+    smallImageKey:
+      "einzbern",
+
+    smallImageText:
+      "Einzbern",
+
+    instance: false
+  });
+}
+
+/* ==================================================
+   HTTP SERVER
+================================================== */
+
+const server =
+  http.createServer(
+    async (req, res) => {
+
+      const origin =
+        req.headers.origin || "";
+
+      /* ------------------------------------------
+         OPTIONS / CORS
+      ------------------------------------------ */
+
+      if (
+        req.method === "OPTIONS"
+      ) {
+
+        if (
+          !isAllowedOrigin(req)
+        ) {
+
+          res.writeHead(403);
+          res.end();
+
+          return;
+        }
+
+        res.writeHead(
+          204,
+          securityHeaders(origin)
+        );
+
+        res.end();
+
+        return;
+      }
+
+      /* ------------------------------------------
+         Origin
+      ------------------------------------------ */
+
+      if (
+        !isAllowedOrigin(req)
+      ) {
+
+        sendJson(
+          res,
+          403,
+          {
+            success: false,
+            error:
+              "Origin não autorizado."
+          },
+          origin
+        );
+
+        return;
+      }
+
+      /* ------------------------------------------
+         Método + Endpoint
+      ------------------------------------------ */
+
+      if (
+        req.method !== "POST" ||
+        req.url !== "/presence"
+      ) {
+
+        sendJson(
+          res,
+          404,
+          {
+            success: false,
