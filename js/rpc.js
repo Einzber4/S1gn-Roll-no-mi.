@@ -2,34 +2,45 @@ const net = require("net");
 const http = require("http");
 const crypto = require("crypto");
 
+// ==================================================
+// CONFIGURAÇÃO
+// ==================================================
+
 const CLIENT_ID = "1094444539638452304";
 
 const HTTP_HOST = "127.0.0.1";
 const HTTP_PORT = 6464;
 
-let socket = null;
-let connected = false;
-let reconnectTimer = null;
+// ==================================================
+// RICH PRESENCE
+// ==================================================
 
 const presence = {
     type: 0,
 
-    details: "Designing The S1gn.",
+    details: "Creating The S1gn.",
     state: "Working on a Project.",
 
     start: Math.floor(Date.now() / 1000),
 
-    large_image: "lumine",
-    large_text: "Lumine",
+    large_image: "cybersecurity",
+    large_text: "S1gn-Tool-No-Mi.",
 
-    small_image: "46be7f0b2664921b0eb36197e1b1e492",
-    small_text: "Furina"
+    small_image: "sandrone",
+    small_text: "Einzbern"
 };
 
+// ==================================================
+// ESTADO DA CONEXÃO
+// ==================================================
 
-// --------------------------------------------------
-// Utilidades
-// --------------------------------------------------
+let socket = null;
+let connected = false;
+let reconnectTimer = null;
+
+// ==================================================
+// UTILIDADES
+// ==================================================
 
 function createNonce() {
     return crypto.randomUUID();
@@ -37,7 +48,7 @@ function createNonce() {
 
 function sendFrame(opcode, data) {
     if (!socket || !connected) {
-        console.log("[RPC] Não conectado ao Discord.");
+        console.log("[RPC] Discord não está conectado.");
         return false;
     }
 
@@ -61,13 +72,16 @@ function sendFrame(opcode, data) {
     return true;
 }
 
-
-// --------------------------------------------------
-// Rich Presence
-// --------------------------------------------------
+// ==================================================
+// ATUALIZAÇÃO DA PRESENCE
+// ==================================================
 
 function updatePresence() {
     if (!connected) {
+        console.log(
+            "[RPC] Não foi possível atualizar: Discord desconectado."
+        );
+
         return false;
     }
 
@@ -93,11 +107,10 @@ function updatePresence() {
     const nonce = createNonce();
 
     console.log("[RPC] Enviando SET_ACTIVITY...");
-    console.log("[RPC] Nonce:", nonce);
+    console.log("[RPC] Activity:", activity);
 
     return sendFrame(1, {
         cmd: "SET_ACTIVITY",
-
         nonce,
 
         args: {
@@ -107,10 +120,9 @@ function updatePresence() {
     });
 }
 
-
-// --------------------------------------------------
-// Desconexão
-// --------------------------------------------------
+// ==================================================
+// DESCONECTAR
+// ==================================================
 
 function disconnect() {
     connected = false;
@@ -121,10 +133,9 @@ function disconnect() {
     }
 }
 
-
-// --------------------------------------------------
-// Conexão com Discord IPC
-// --------------------------------------------------
+// ==================================================
+// CONEXÃO IPC COM DISCORD
+// ==================================================
 
 function connectToDiscord(pipeIndex = 0) {
     if (connected) {
@@ -133,7 +144,7 @@ function connectToDiscord(pipeIndex = 0) {
 
     if (pipeIndex > 9) {
         console.log(
-            "[RPC] Nenhum pipe do Discord foi encontrado."
+            "[RPC] Nenhum pipe IPC do Discord encontrado."
         );
 
         scheduleReconnect();
@@ -148,6 +159,10 @@ function connectToDiscord(pipeIndex = 0) {
     );
 
     const newSocket = net.createConnection(pipe);
+
+    // ------------------------------------------------
+    // CONEXÃO ESTABELECIDA
+    // ------------------------------------------------
 
     newSocket.once("connect", () => {
         socket = newSocket;
@@ -164,105 +179,117 @@ function connectToDiscord(pipeIndex = 0) {
         });
     });
 
+    // ------------------------------------------------
+    // DADOS RECEBIDOS
+    // ------------------------------------------------
 
     newSocket.on("data", buffer => {
         if (buffer.length < 8) {
             return;
         }
 
-        const opcode = buffer.readUInt32LE(0);
-        const length = buffer.readUInt32LE(4);
+        let offset = 0;
 
-        if (buffer.length < 8 + length) {
-            console.log(
-                "[RPC] Frame incompleto recebido."
-            );
+        while (offset + 8 <= buffer.length) {
+            const opcode = buffer.readUInt32LE(offset);
+            const length = buffer.readUInt32LE(offset + 4);
 
-            return;
-        }
-
-        const rawPayload = buffer
-            .subarray(8, 8 + length)
-            .toString("utf8");
-
-        let payload;
-
-        try {
-            payload = JSON.parse(rawPayload);
-        } catch (error) {
-            console.error(
-                "[RPC] Não foi possível interpretar a resposta:"
-            );
-
-            console.error(rawPayload);
-
-            return;
-        }
-
-        console.log(
-            "[RPC] Resposta recebida:",
-            payload
-        );
-
-
-        // ------------------------------------------
-        // READY
-        // ------------------------------------------
-
-        if (payload.evt === "READY") {
-            console.log(
-                "[RPC] Discord confirmou a conexão."
-            );
-
-            updatePresence();
-
-            return;
-        }
-
-
-        // ------------------------------------------
-        // ERRO
-        // ------------------------------------------
-
-        if (payload.evt === "ERROR") {
-            console.error(
-                "[RPC] Discord rejeitou uma operação."
-            );
-
-            console.error(
-                "[RPC] Código:",
-                payload.data?.code
-            );
-
-            console.error(
-                "[RPC] Mensagem:",
-                payload.data?.message
-            );
-
-            return;
-        }
-
-
-        // ------------------------------------------
-        // Resposta SET_ACTIVITY
-        // ------------------------------------------
-
-        if (payload.cmd === "SET_ACTIVITY") {
-            console.log(
-                "[RPC] Resposta do SET_ACTIVITY recebida."
-            );
-
-            if (payload.data) {
+            if (offset + 8 + length > buffer.length) {
                 console.log(
-                    "[RPC] Dados:",
-                    payload.data
+                    "[RPC] Frame incompleto recebido."
                 );
+
+                break;
             }
 
-            return;
+            const rawPayload = buffer
+                .subarray(
+                    offset + 8,
+                    offset + 8 + length
+                )
+                .toString("utf8");
+
+            offset += 8 + length;
+
+            let payload;
+
+            try {
+                payload = JSON.parse(rawPayload);
+            } catch (error) {
+                console.error(
+                    "[RPC] Erro ao interpretar resposta do Discord:"
+                );
+
+                console.error(rawPayload);
+
+                continue;
+            }
+
+            console.log(
+                "[RPC] Resposta recebida:",
+                payload
+            );
+
+            // ----------------------------------------
+            // READY
+            // ----------------------------------------
+
+            if (payload.evt === "READY") {
+                console.log(
+                    "[RPC] Discord confirmou a conexão."
+                );
+
+                updatePresence();
+
+                continue;
+            }
+
+            // ----------------------------------------
+            // ERRO
+            // ----------------------------------------
+
+            if (payload.evt === "ERROR") {
+                console.error(
+                    "[RPC] Discord rejeitou a operação."
+                );
+
+                console.error(
+                    "[RPC] Código:",
+                    payload.data?.code
+                );
+
+                console.error(
+                    "[RPC] Mensagem:",
+                    payload.data?.message
+                );
+
+                continue;
+            }
+
+            // ----------------------------------------
+            // SET_ACTIVITY
+            // ----------------------------------------
+
+            if (payload.cmd === "SET_ACTIVITY") {
+                console.log(
+                    "[RPC] Resposta do SET_ACTIVITY recebida."
+                );
+
+                if (payload.data) {
+                    console.log(
+                        "[RPC] Dados do Discord:",
+                        payload.data
+                    );
+                }
+
+                continue;
+            }
         }
     });
 
+    // ------------------------------------------------
+    // FECHAMENTO
+    // ------------------------------------------------
 
     newSocket.once("close", () => {
         if (socket === newSocket) {
@@ -276,20 +303,31 @@ function connectToDiscord(pipeIndex = 0) {
         }
     });
 
+    // ------------------------------------------------
+    // ERRO
+    // ------------------------------------------------
 
-    newSocket.once("error", () => {
-        newSocket.destroy();
-
+    newSocket.once("error", error => {
         if (!connected) {
+            console.log(
+                `[RPC] Pipe ${pipeIndex} indisponível.`
+            );
+
+            newSocket.destroy();
+
             connectToDiscord(pipeIndex + 1);
+        } else {
+            console.error(
+                "[RPC] Erro na conexão:",
+                error.message
+            );
         }
     });
 }
 
-
-// --------------------------------------------------
-// Reconexão
-// --------------------------------------------------
+// ==================================================
+// RECONEXÃO
+// ==================================================
 
 function scheduleReconnect() {
     if (reconnectTimer) {
@@ -303,10 +341,9 @@ function scheduleReconnect() {
     }, 5000);
 }
 
-
-// --------------------------------------------------
-// Bridge HTTP local
-// --------------------------------------------------
+// ==================================================
+// HTTP BRIDGE
+// ==================================================
 
 function sendJson(response, status, data) {
     response.writeHead(status, {
@@ -328,13 +365,16 @@ function sendJson(response, status, data) {
     );
 }
 
+// ==================================================
+// SERVIDOR HTTP
+// ==================================================
 
 const server = http.createServer(
     (request, response) => {
 
-        // ------------------------------------------
+        // --------------------------------------------
         // CORS
-        // ------------------------------------------
+        // --------------------------------------------
 
         if (request.method === "OPTIONS") {
             sendJson(
@@ -346,10 +386,9 @@ const server = http.createServer(
             return;
         }
 
-
-        // ------------------------------------------
-        // Status
-        // ------------------------------------------
+        // --------------------------------------------
+        // STATUS
+        // --------------------------------------------
 
         if (
             request.method === "GET" &&
@@ -367,10 +406,9 @@ const server = http.createServer(
             return;
         }
 
-
-        // ------------------------------------------
-        // Atualização da Presence
-        // ------------------------------------------
+        // --------------------------------------------
+        // ATUALIZAR PRESENCE
+        // --------------------------------------------
 
         if (
             request.method === "POST" &&
@@ -392,7 +430,6 @@ const server = http.createServer(
                         const data =
                             JSON.parse(body);
 
-
                         if (
                             typeof data.details ===
                             "string"
@@ -400,7 +437,6 @@ const server = http.createServer(
                             presence.details =
                                 data.details;
                         }
-
 
                         if (
                             typeof data.state ===
@@ -410,7 +446,6 @@ const server = http.createServer(
                                 data.state;
                         }
 
-
                         if (
                             typeof data.start ===
                             "number"
@@ -419,9 +454,7 @@ const server = http.createServer(
                                 data.start;
                         }
 
-
                         updatePresence();
-
 
                         sendJson(
                             response,
@@ -433,7 +466,7 @@ const server = http.createServer(
                             }
                         );
 
-                    } catch {
+                    } catch (error) {
                         sendJson(
                             response,
                             400,
@@ -450,10 +483,9 @@ const server = http.createServer(
             return;
         }
 
-
-        // ------------------------------------------
+        // --------------------------------------------
         // 404
-        // ------------------------------------------
+        // --------------------------------------------
 
         sendJson(
             response,
@@ -467,10 +499,9 @@ const server = http.createServer(
     }
 );
 
-
-// --------------------------------------------------
-// Inicialização
-// --------------------------------------------------
+// ==================================================
+// INICIALIZAÇÃO
+// ==================================================
 
 server.listen(
     HTTP_PORT,
@@ -480,6 +511,34 @@ server.listen(
         console.log(
             `[RPC] Bridge iniciada em ` +
             `http://${HTTP_HOST}:${HTTP_PORT}`
+        );
+
+        console.log(
+            "[RPC] Configuração atual:"
+        );
+
+        console.log(
+            `       Large Image: ${presence.large_image}`
+        );
+
+        console.log(
+            `       Large Text:  ${presence.large_text}`
+        );
+
+        console.log(
+            `       Small Image: ${presence.small_image}`
+        );
+
+        console.log(
+            `       Small Text:  ${presence.small_text}`
+        );
+
+        console.log(
+            `       Details:     ${presence.details}`
+        );
+
+        console.log(
+            `       State:       ${presence.state}`
         );
 
         connectToDiscord(0);
