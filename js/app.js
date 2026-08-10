@@ -315,3 +315,4 @@ async function updateRichPresence(details) {
         );
     }
 }
+updateRichPresence("Developing The S1gn.");
