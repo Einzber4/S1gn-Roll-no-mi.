@@ -278,4 +278,40 @@ async function updateRichPresence(details) {
             error
         );
     }
+}async function updateRichPresence(details) {
+    try {
+        const response = await fetch(
+            "http://127.0.0.1:6464/presence",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    details
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            console.error(
+                "[RPC] Falha ao atualizar:",
+                result
+            );
+            return;
+        }
+
+        console.log(
+            "[RPC] Activity atualizada:",
+            details
+        );
+
+    } catch (error) {
+        console.error(
+            "[RPC] Não foi possível conectar à Bridge:",
+            error
+        );
+    }
 }
