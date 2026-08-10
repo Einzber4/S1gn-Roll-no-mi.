@@ -241,3 +241,41 @@ document.querySelector("#cancel").onclick=()=>{
 
 ensure();
 render();
+async function updateRichPresence(details) {
+    try {
+        const response = await fetch(
+            "http://127.0.0.1:6464/presence",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    details: details,
+                    state: "Working on a Project."
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error(
+                "[RPC] Falha ao atualizar Rich Presence:",
+                data
+            );
+            return;
+        }
+
+        console.log(
+            "[RPC] Rich Presence atualizado:",
+            data
+        );
+
+    } catch (error) {
+        console.error(
+            "[RPC] Bridge indisponível:",
+            error
+        );
+    }
+}
