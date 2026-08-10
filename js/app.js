@@ -80,33 +80,30 @@ function renderWheelNames() {
    *
    * Não modificamos os setores.
    */
-  const positions = [
-    {
-      left: "50%",
-      top: "17%",
-      transform: "translate(-50%, -50%)"
-    },
-    {
-      left: "82%",
-      top: "40%",
-      transform: "translate(-50%, -50%)"
-    },
-    {
-      left: "69%",
-      top: "77%",
-      transform: "translate(-50%, -50%)"
-    },
-    {
-      left: "31%",
-      top: "77%",
-      transform: "translate(-50%, -50%)"
-    },
-    {
-      left: "18%",
-      top: "40%",
-      transform: "translate(-50%, -50%)"
+  /*
+   * A Roleta possui 5 setores iguais.
+   * Cada nome é colocado no centro geométrico
+   * do seu respectivo setor.
+   *
+   * 0° = topo; os setores seguem no sentido horário.
+   */
+  const totalSectors = 5;
+  const slice = 360 / totalSectors;
+  const radius = 30;
+
+  const positions = Array.from(
+    { length: totalSectors },
+    (_, index) => {
+      const angle = index * slice + slice / 2;
+      const radians = (angle - 90) * Math.PI / 180;
+
+      return {
+        left: `${50 + Math.cos(radians) * radius}%`,
+        top: `${50 + Math.sin(radians) * radius}%`,
+        transform: "translate(-50%, -50%)"
+      };
     }
-  ];
+  );
 
   /*
    * Somente os nomes existentes são exibidos.
@@ -121,6 +118,8 @@ function renderWheelNames() {
     label.style.left = positions[index].left;
     label.style.top = positions[index].top;
     label.style.transform = positions[index].transform;
+    label.style.width = "25%";
+    label.style.textAlign = "center";
 
     const text = document.createElement("span");
 
