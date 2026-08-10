@@ -6,15 +6,46 @@ const path = require("path");
 const RPC = require("discord-rpc");
 
 /* ==================================================
-   CONFIGURAÇÃO
+   CONFIGURATION
 ================================================== */
-
-const CLIENT_ID =
-  process.env.DISCORD_CLIENT_ID ||
-  "1094444539638452304";
 
 const HOST = "127.0.0.1";
 const PORT = 6464;
+
+const CLIENT_ID =
+  process.env.DISCORD_CLIENT_ID;
+
+if (
+  !CLIENT_ID ||
+  !/^\d{17,20}$/.test(CLIENT_ID)
+) {
+  console.error(
+    "[RPC] DISCORD_CLIENT_ID ausente ou inválido."
+  );
+
+  process.exit(1);
+}
+
+/* ==================================================
+   SECURITY LIMITS
+================================================== */
+
+const MAX_BODY_SIZE = 16 * 1024;
+const MAX_DETAILS_LENGTH = 128;
+const MAX_STATE_LENGTH = 128;
+
+const RATE_WINDOW = 1000;
+const MAX_REQUESTS = 10;
+
+let requestCount = 0;
+let rateWindowStart = Date.now();
+
+/* ==================================================
+   ALLOWED ORIGIN
+================================================== */
+
+const ALLOWED_ORIGIN =
+  "http://127.0.0.1:5500";
 
 /* ==================================================
    INSTANCE LOCK
@@ -27,7 +58,7 @@ const LOCK_FILE = path.join(
 
 let lockAcquired = false;
 
-function isProcessRunning(pid) {
+function processExists(pid) {
   if (!Number.isInteger(pid) || pid <= 0) {
     return false;
   }
@@ -40,19 +71,8 @@ function isProcessRunning(pid) {
   }
 }
 
-function acquireInstanceLock() {
+function acquireLock() {
   try {
-    const lockData = JSON.stringify({
-      pid: process.pid,
-      startedAt: new Date().toISOString()
-    });
-
-    /*
-     * "wx" = criar somente se o arquivo NÃO existir.
-     *
-     * A operação é atômica, impedindo duas instâncias
-     * de obterem o lock simultaneamente.
-     */
     const fd = fs.openSync(
       LOCK_FILE,
       "wx"
@@ -60,7 +80,10 @@ function acquireInstanceLock() {
 
     fs.writeFileSync(
       fd,
-      lockData,
+      JSON.stringify({
+        pid: process.pid,
+        startedAt: new Date().toISOString()
+      }),
       "utf8"
     );
 
@@ -69,7 +92,7 @@ function acquireInstanceLock() {
     lockAcquired = true;
 
     console.log(
-      `[RPC] Instance Lock: ACTIVE (PID ${process.pid})`
+      `[RPC] Instance Lock: ACTIVE (${process.pid})`
     );
 
     return true;
@@ -78,36 +101,22 @@ function acquireInstanceLock() {
 
     if (error.code !== "EEXIST") {
       console.error(
-        "[RPC] Falha ao criar Instance Lock:",
-        error.message
+        "[RPC] Não foi possível criar o Instance Lock."
       );
 
       return false;
     }
 
-    /*
-     * Lock já existe.
-     * Verificar se pertence a um processo ativo.
-     */
-    let existingLock;
+    let lock;
 
     try {
-      existingLock =
-        JSON.parse(
-          fs.readFileSync(
-            LOCK_FILE,
-            "utf8"
-          )
-        );
-    } catch {
-
-      /*
-       * Lock corrompido ou ilegível.
-       * Removê-lo e tentar novamente.
-       */
-      console.warn(
-        "[RPC] Lock inválido encontrado."
+      lock = JSON.parse(
+        fs.readFileSync(
+          LOCK_FILE,
+          "utf8"
+        )
       );
+    } catch {
 
       try {
         fs.unlinkSync(
@@ -115,45 +124,27 @@ function acquireInstanceLock() {
         );
       } catch {}
 
-      return acquireInstanceLock();
+      return acquireLock();
     }
 
-    const existingPid =
-      Number(existingLock.pid);
+    const pid =
+      Number(lock.pid);
 
-    if (
-      isProcessRunning(existingPid)
-    ) {
+    if (processExists(pid)) {
 
       console.error(
-        "=========================================="
+        "[RPC] INSTANCE LOCK BLOQUEADO."
       );
 
       console.error(
-        "[RPC] INSTANCE LOCK BLOQUEADO"
-      );
-
-      console.error(
-        `[RPC] PID ativo: ${existingPid}`
-      );
-
-      console.error(
-        "[RPC] Outra instância da Bridge já está executando."
-      );
-
-      console.error(
-        "=========================================="
+        `[RPC] Processo ativo: ${pid}`
       );
 
       return false;
     }
 
-    /*
-     * O processo registrado não existe mais.
-     * Trata-se de um lock órfão.
-     */
     console.warn(
-      `[RPC] Lock órfão detectado (PID ${existingPid}).`
+      "[RPC] Removendo Instance Lock órfão."
     );
 
     try {
@@ -162,36 +153,28 @@ function acquireInstanceLock() {
       );
     } catch {}
 
-    return acquireInstanceLock();
+    return acquireLock();
   }
 }
 
-function releaseInstanceLock() {
+function releaseLock() {
   if (!lockAcquired) {
     return;
   }
 
   try {
-    /*
-     * Confirmar que o lock pertence a este processo
-     * antes de removê-lo.
-     */
-    const data =
-      JSON.parse(
-        fs.readFileSync(
-          LOCK_FILE,
-          "utf8"
-        )
-      );
+
+    const lock = JSON.parse(
+      fs.readFileSync(
+        LOCK_FILE,
+        "utf8"
+      )
+    );
 
     if (
-      Number(data.pid) !==
+      Number(lock.pid) !==
       process.pid
     ) {
-      console.warn(
-        "[RPC] Lock não pertence a este processo."
-      );
-
       return;
     }
 
@@ -205,361 +188,25 @@ function releaseInstanceLock() {
       "[RPC] Instance Lock: RELEASED"
     );
 
-  } catch (error) {
-
-    if (error.code !== "ENOENT") {
-      console.warn(
-        "[RPC] Não foi possível remover o Instance Lock:",
-        error.message
-      );
-    }
-  }
+  } catch {}
 }
 
-/* ==================================================
-   OBTENÇÃO DO LOCK
-================================================== */
-
-if (!acquireInstanceLock()) {
-  console.error(
-    "[RPC] Inicialização abortada."
-  );
-
+if (!acquireLock()) {
   process.exit(1);
 }
 
 /* ==================================================
-   ORIGINS
-================================================== */
-
-const ALLOWED_ORIGINS = new Set([
-  "http://127.0.0.1:5500",
-  "http://localhost:5500"
-]);
-
-/* ==================================================
-   LIMITES
-================================================== */
-
-const MAX_BODY_SIZE =
-  16 * 1024; // 16 KB
-
-const MAX_DETAILS_LENGTH =
-  128;
-
-const MAX_STATE_LENGTH =
-  128;
-
-const RATE_WINDOW =
-  1000;
-
-const MAX_REQUESTS_PER_WINDOW =
-  10;
-
-let requestCount = 0;
-let requestWindowStart =
-  Date.now();
-
-/* ==================================================
-   RPC
+   DISCORD RPC
 ================================================== */
 
 let rpc = null;
 let rpcReady = false;
 
-/* ==================================================
-   RATE LIMIT
-================================================== */
-
-function isRateLimited() {
-  const now = Date.now();
-
-  if (
-    now - requestWindowStart >=
-    RATE_WINDOW
-  ) {
-    requestWindowStart = now;
-    requestCount = 0;
-  }
-
-  requestCount++;
-
-  return (
-    requestCount >
-    MAX_REQUESTS_PER_WINDOW
-  );
-}
-
-/* ==================================================
-   ORIGIN VALIDATION
-================================================== */
-
-function isAllowedOrigin(req) {
-  const origin =
-    req.headers.origin;
-
-  if (!origin) {
-    return false;
-  }
-
-  return ALLOWED_ORIGINS.has(
-    origin
-  );
-}
-
-/* ==================================================
-   SECURITY HEADERS
-================================================== */
-
-function securityHeaders(origin) {
-  return {
-    "Content-Type":
-      "application/json; charset=utf-8",
-
-    "Cache-Control":
-      "no-store",
-
-    "X-Content-Type-Options":
-      "nosniff",
-
-    "Referrer-Policy":
-      "no-referrer",
-
-    "Content-Security-Policy":
-      "default-src 'none'; frame-ancestors 'none'",
-
-    "Access-Control-Allow-Origin":
-      origin,
-
-    "Access-Control-Allow-Methods":
-      "POST, OPTIONS",
-
-    "Access-Control-Allow-Headers":
-      "Content-Type",
-
-    "Access-Control-Max-Age":
-      "600"
-  };
-}
-
-/* ==================================================
-   JSON RESPONSE
-================================================== */
-
-function sendJson(
-  res,
-  status,
-  payload,
-  origin = ""
-) {
-  res.writeHead(
-    status,
-    securityHeaders(origin)
-  );
-
-  res.end(
-    JSON.stringify(payload)
-  );
-}
-
-/* ==================================================
-   BODY LIMIT
-================================================== */
-
-function readLimitedBody(req) {
-  return new Promise(
-    (resolve, reject) => {
-
-      let body = "";
-      let size = 0;
-      let finished = false;
-
-      req.setEncoding("utf8");
-
-      req.on(
-        "data",
-        chunk => {
-
-          if (finished) {
-            return;
-          }
-
-          size += Buffer.byteLength(
-            chunk,
-            "utf8"
-          );
-
-          if (
-            size >
-            MAX_BODY_SIZE
-          ) {
-
-            finished = true;
-
-            reject(
-              Object.assign(
-                new Error(
-                  "Request body too large."
-                ),
-                {
-                  statusCode: 413
-                }
-              )
-            );
-
-            req.destroy();
-
-            return;
-          }
-
-          body += chunk;
-        }
-      );
-
-      req.on(
-        "end",
-        () => {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          resolve(body);
-        }
-      );
-
-      req.on(
-        "error",
-        error => {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          reject(error);
-        }
-      );
-
-      req.on(
-        "aborted",
-        () => {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          reject(
-            Object.assign(
-              new Error(
-                "Request aborted."
-              ),
-              {
-                statusCode: 400
-              }
-            )
-          );
-        }
-      );
-    }
-  );
-}
-
-/* ==================================================
-   PAYLOAD VALIDATION
-================================================== */
-
-function validatePresencePayload(
-  body
-) {
-  if (
-    !body ||
-    typeof body !== "object" ||
-    Array.isArray(body)
-  ) {
-    return {
-      valid: false,
-      error: "Payload inválido."
-    };
-  }
-
-  const {
-    details,
-    state
-  } = body;
-
-  const allowedKeys = [
-    "details",
-    "state"
-  ];
-
-  for (
-    const key of Object.keys(body)
-  ) {
-
-    if (
-      !allowedKeys.includes(key)
-    ) {
-      return {
-        valid: false,
-        error:
-          "Payload contém propriedades não autorizadas."
-      };
-    }
-  }
-
-  if (
-    typeof details !== "string" ||
-    details.length === 0 ||
-    details.length >
-      MAX_DETAILS_LENGTH
-  ) {
-    return {
-      valid: false,
-      error:
-        "Campo 'details' inválido."
-    };
-  }
-
-  if (
-    state !== undefined &&
-    (
-      typeof state !== "string" ||
-      state.length >
-        MAX_STATE_LENGTH
-    )
-  ) {
-    return {
-      valid: false,
-      error:
-        "Campo 'state' inválido."
-    };
-  }
-
-  return {
-    valid: true,
-    details,
-    state:
-      typeof state === "string"
-        ? state
-        : "Working on a Project."
-  };
-}
-
-/* ==================================================
-   DISCORD CONNECTION
-================================================== */
-
 async function connectRPC() {
 
   if (
-    rpcReady &&
-    rpc
+    rpc &&
+    rpcReady
   ) {
     return;
   }
@@ -606,30 +253,205 @@ async function connectRPC() {
     }
   );
 
-  try {
+  await rpc.login({
+    clientId: CLIENT_ID
+  });
+}
 
-    await rpc.login({
-      clientId: CLIENT_ID
-    });
+/* ==================================================
+   RATE LIMIT
+================================================== */
 
-  } catch (error) {
+function isRateLimited() {
 
-    rpcReady = false;
+  const now = Date.now();
 
-    console.error(
-      "[RPC] Discord connection failed:",
-      error.message
-    );
-
-    throw error;
+  if (
+    now - rateWindowStart >=
+    RATE_WINDOW
+  ) {
+    rateWindowStart = now;
+    requestCount = 0;
   }
+
+  requestCount++;
+
+  return (
+    requestCount >
+    MAX_REQUESTS
+  );
+}
+
+/* ==================================================
+   BODY LIMIT
+================================================== */
+
+function readLimitedBody(req) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      let body = "";
+      let size = 0;
+      let finished = false;
+
+      req.setEncoding("utf8");
+
+      req.on(
+        "data",
+        chunk => {
+
+          if (finished) {
+            return;
+          }
+
+          size += Buffer.byteLength(
+            chunk,
+            "utf8"
+          );
+
+          if (
+            size >
+            MAX_BODY_SIZE
+          ) {
+
+            finished = true;
+
+            reject({
+              status: 413,
+              message:
+                "Request body too large."
+            });
+
+            req.destroy();
+
+            return;
+          }
+
+          body += chunk;
+        }
+      );
+
+      req.on(
+        "end",
+        () => {
+
+          if (finished) {
+            return;
+          }
+
+          finished = true;
+
+          resolve(body);
+        }
+      );
+
+      req.on(
+        "error",
+        error => {
+
+          if (finished) {
+            return;
+          }
+
+          finished = true;
+
+          reject({
+            status: 400,
+            message: error.message
+          });
+        }
+      );
+    }
+  );
+}
+
+/* ==================================================
+   PAYLOAD VALIDATION
+================================================== */
+
+function validatePayload(payload) {
+
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
+    return {
+      valid: false,
+      error: "Invalid payload."
+    };
+  }
+
+  const keys =
+    Object.keys(payload);
+
+  const allowed = [
+    "details",
+    "state"
+  ];
+
+  for (const key of keys) {
+
+    if (!allowed.includes(key)) {
+
+      return {
+        valid: false,
+        error:
+          "Unauthorized payload property."
+      };
+    }
+  }
+
+  const {
+    details,
+    state
+  } = payload;
+
+  if (
+    typeof details !== "string" ||
+    details.length === 0 ||
+    details.length >
+      MAX_DETAILS_LENGTH
+  ) {
+
+    return {
+      valid: false,
+      error:
+        "Invalid details."
+    };
+  }
+
+  if (
+    state !== undefined &&
+    (
+      typeof state !== "string" ||
+      state.length >
+        MAX_STATE_LENGTH
+    )
+  ) {
+
+    return {
+      valid: false,
+      error:
+        "Invalid state."
+    };
+  }
+
+  return {
+    valid: true,
+    details,
+    state:
+      state ??
+      "Working on a Project."
+  };
 }
 
 /* ==================================================
    ACTIVITY
 ================================================== */
 
-async function setActivity(
+async function updateActivity(
   details,
   state
 ) {
@@ -641,7 +463,7 @@ async function setActivity(
     !rpcReady
   ) {
     throw new Error(
-      "Discord RPC indisponível."
+      "Discord RPC unavailable."
     );
   }
 
@@ -652,169 +474,4 @@ async function setActivity(
     state,
 
     largeImageKey:
-      "s1gn-tool-no-mi",
-
-    largeImageText:
-      "S1gn-Tool-No-Mi.",
-
-    smallImageKey:
-      "einzbern",
-
-    smallImageText:
-      "Einzbern",
-
-    instance: false
-  });
-}
-
-/* ==================================================
-   HTTP SERVER
-================================================== */
-
-const server =
-  http.createServer(
-    async (req, res) => {
-
-      const origin =
-        req.headers.origin ||
-        "";
-
-      /* OPTIONS */
-
-      if (
-        req.method ===
-        "OPTIONS"
-      ) {
-
-        if (
-          !isAllowedOrigin(req)
-        ) {
-
-          res.writeHead(403);
-          res.end();
-
-          return;
-        }
-
-        res.writeHead(
-          204,
-          securityHeaders(origin)
-        );
-
-        res.end();
-
-        return;
-      }
-
-      /* ORIGIN */
-
-      if (
-        !isAllowedOrigin(req)
-      ) {
-
-        sendJson(
-          res,
-          403,
-          {
-            success: false,
-            error:
-              "Origin não autorizado."
-          },
-          origin
-        );
-
-        return;
-      }
-
-      /* ENDPOINT */
-
-      if (
-        req.method !== "POST" ||
-        req.url !== "/presence"
-      ) {
-
-        sendJson(
-          res,
-          404,
-          {
-            success: false,
-            error:
-              "Endpoint não encontrado."
-          },
-          origin
-        );
-
-        return;
-      }
-
-      /* RATE LIMIT */
-
-      if (
-        isRateLimited()
-      ) {
-
-        sendJson(
-          res,
-          429,
-          {
-            success: false,
-            error:
-              "Muitas requisições."
-          },
-          origin
-        );
-
-        return;
-      }
-
-      /* CONTENT TYPE */
-
-      const contentType =
-        req.headers[
-          "content-type"
-        ] || "";
-
-      if (
-        !contentType
-          .toLowerCase()
-          .startsWith(
-            "application/json"
-          )
-      ) {
-
-        sendJson(
-          res,
-          415,
-          {
-            success: false,
-            error:
-              "Content-Type inválido."
-          },
-          origin
-        );
-
-        return;
-      }
-
-      /* CONTENT LENGTH */
-
-      const contentLength =
-        Number(
-          req.headers[
-            "content-length"
-          ]
-        );
-
-      if (
-        Number.isFinite(
-          contentLength
-        ) &&
-        contentLength >
-          MAX_BODY_SIZE
-      ) {
-
-        sendJson(
-          res,
-          413,
-          {
-            success
+      "
