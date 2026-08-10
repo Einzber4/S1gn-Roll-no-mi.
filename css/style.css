@@ -1,35 +1,87 @@
-:root{color-scheme:dark;--bg:#090b10;--panel:#151a22;--line:#252c38;--text:#eef2f7;--muted:#929baa;--accent:#8ea8ff}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roleta — Decision Engine</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#11151d;--line:#252c38;--text:#eef2f7;--muted:#929baa;--accent:#8ea8ff}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at 50% 0,#171d2a 0,#090b10 45%);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
 main{width:min(1050px,94vw);margin:auto;padding:36px 0 60px}
 header{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:24px}
-h1{margin:0;font-size:30px;letter-spacing:.08em}h2{margin:0 0 14px}.sub{color:var(--muted);margin:6px 0 0}
-.grid{display:grid;grid-template-columns:300px 1fr;gap:18px}.panel{background:#0f131aee;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 14px 50px #0005}
-button,input{font:inherit}button{border:1px solid var(--line);background:#171c25;color:var(--text);border-radius:11px;padding:10px 13px;cursor:pointer;transition:border-color .2s ease,transform .2s ease,box-shadow .2s ease,background .2s ease,opacity .2s ease}
-button:hover{border-color:#56637a;transform:translateY(-1px)}button:active{transform:translateY(1px)}
-button:disabled{cursor:not-allowed;opacity:.72;transform:none}
+h1{margin:0;font-size:30px;letter-spacing:.08em}
+h2{margin:0 0 14px}.sub{color:var(--muted);margin:6px 0 0}
+.grid{display:grid;grid-template-columns:300px 1fr;gap:18px}
+.panel{background:#0f131aee;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 14px 50px #0005}
+button,input{font:inherit}
+button{border:1px solid var(--line);background:#171c25;color:var(--text);border-radius:11px;padding:10px 13px;cursor:pointer}
+button:hover{border-color:#56637a}
 button.primary{background:#27365f;border-color:#536aa8;font-weight:700}
-button.primary:hover{background:#304372;border-color:#718bd4;box-shadow:0 6px 20px #27365f55}
-button.primary.spinning{background:#202a49;border-color:#6d84c5;box-shadow:0 0 24px #8ea8ff24;animation:buttonPulse 1.15s ease-in-out infinite}
 button.danger{color:#ffb3b3}
-.cats{display:grid;gap:8px}.cat{text-align:left}.cat.active{border-color:var(--accent);box-shadow:inset 3px 0 var(--accent),0 0 16px #8ea8ff18}
-.row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}.muted{color:var(--muted)}.small{font-size:12px}
-input{width:100%;background:#0b0e14;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px;transition:border-color .2s ease,box-shadow .2s ease}
-input:focus{outline:none;border-color:#536aa8;box-shadow:0 0 0 3px #536aa822}
-form{display:flex;gap:8px;margin:14px 0}.list{display:grid;gap:8px;max-height:310px;overflow:auto}
-.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#0c1016;transition:border-color .2s ease,transform .2s ease}
-.item:hover{border-color:#3b4658;transform:translateX(2px)}.item.done{opacity:.45;text-decoration:line-through}.center{text-align:center}
-.wheel-wrap{position:relative;width:min(440px,80vw);aspect-ratio:1;margin:15px auto;display:grid;place-items:center;filter:drop-shadow(0 22px 35px #0009)}
-.wheel{width:100%;height:100%;border-radius:50%;border:8px solid #222a36;background:conic-gradient(#6577a6 0deg 72deg,#293141 72deg 144deg,#53627f 144deg 216deg,#222936 216deg 288deg,#7b88a5 288deg 360deg);box-shadow:0 0 0 2px #080a0e,inset 0 0 0 3px #ffffff0b,inset 0 0 35px #0008,0 20px 60px #0008;transition:transform 3.2s cubic-bezier(.12,.72,.08,1);position:relative;overflow:hidden}
-.wheel::before{content:"";position:absolute;inset:10px;border-radius:50%;border:1px solid #ffffff18;box-shadow:inset 0 0 25px #ffffff08,0 0 15px #0005;pointer-events:none}
-.wheel::after{content:"";position:absolute;width:58px;height:58px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff22,#ffffff05 35%,#090b10 100%);border:2px solid #cbd5e720;box-shadow:0 0 0 5px #080a0e88,0 5px 18px #0009;pointer-events:none}
-.pointer{position:absolute;top:-13px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:30px solid #eef2f7;filter:drop-shadow(0 3px 4px #000b) drop-shadow(0 0 7px #8ea8ff44);z-index:2}
-.pointer::after{content:"";position:absolute;left:-3px;top:-25px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px #ffffffaa}
-.result{min-height:72px;display:grid;place-items:center;border:1px dashed #394354;border-radius:14px;margin:16px 0;padding:12px;background:#0b0f16aa;transition:border-color .25s ease,background .25s ease,box-shadow .25s ease,opacity .25s ease,transform .25s ease}
-.result strong{font-size:21px}
-.result.is-spinning{border-color:#4b5f8e;background:#10172aaa;box-shadow:inset 0 0 28px #8ea8ff08}
-.result.reveal{animation:resultReveal .55s cubic-bezier(.2,.8,.2,1) both;border-color:#536aa8;box-shadow:0 0 26px #8ea8ff18,inset 0 0 22px #8ea8ff08}
-.actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.hidden{display:none}
-@keyframes resultReveal{0%{opacity:0;transform:scale(.96);filter:blur(3px)}65%{opacity:1;transform:scale(1.015);filter:blur(0)}100%{opacity:1;transform:scale(1)}}
-@keyframes buttonPulse{0%,100%{box-shadow:0 0 12px #8ea8ff14}50%{box-shadow:0 0 28px #8ea8ff30}}
-@media(max-width:760px){.grid{grid-template-columns:1fr}header{align-items:start;flex-direction:column}.wheel-wrap{width:min(360px,82vw)}.wheel{border-width:7px}.pointer{top:-11px;border-left-width:13px;border-right-width:13px;border-top-width:27px}}
+.cats{display:grid;gap:8px}.cat{text-align:left}
+.cat.active{border-color:var(--accent);box-shadow:inset 3px 0 var(--accent)}
+.row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}
+.muted{color:var(--muted)}.small{font-size:12px}
+input{width:100%;background:#0b0e14;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px}
+form{display:flex;gap:8px;margin:14px 0}
+.list{display:grid;gap:8px;max-height:310px;overflow:auto}
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#0c1016}
+.item.done{opacity:.45;text-decoration:line-through}.center{text-align:center}
+.wheel-wrap{position:relative;width:min(440px,80vw);aspect-ratio:1;margin:15px auto}
+.wheel{position:relative;width:100%;height:100%;border-radius:50%;border:8px solid #222a36;background:conic-gradient(#6577a6 0deg 72deg,#293141 72deg 144deg,#53627f 144deg 216deg,#222936 216deg 288deg,#7b88a5 288deg 360deg);box-shadow:0 0 0 2px #080a0e,0 20px 60px #0008;transition:transform 3.2s cubic-bezier(.12,.72,.08,1);overflow:hidden}
+.wheel-label{position:absolute;left:50%;top:50%;width:42%;min-height:30px;display:flex;align-items:center;justify-content:center;padding:4px 8px;color:#eef2f7;font-size:12px;font-weight:700;line-height:1.15;text-align:center;text-shadow:0 1px 3px #000,0 2px 6px #000;pointer-events:none;transform-origin:0 0}
+.wheel-label span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:normal;overflow-wrap:anywhere}
+.wheel-center{position:absolute;left:50%;top:50%;width:72px;height:72px;transform:translate(-50%,-50%);border-radius:50%;background:#11151d;border:2px solid #56637a;box-shadow:0 0 0 4px #090b10aa,0 8px 25px #0008;display:grid;place-items:center;z-index:3;pointer-events:none}
+.wheel-center span{font-size:10px;font-weight:800;letter-spacing:.12em;color:#eef2f7}
+.pointer{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:25px solid #eef2f7;z-index:5;filter:drop-shadow(0 2px 3px #0008)}
+.result{min-height:72px;display:grid;place-items:center;border:1px dashed #394354;border-radius:14px;margin:16px 0;padding:12px}
+.result strong{font-size:21px}.actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.hidden{display:none}
+@media(max-width:760px){.grid{grid-template-columns:1fr}header{align-items:start;flex-direction:column}.wheel-wrap{width:min(360px,82vw)}.wheel-label{font-size:10px;width:44%;padding:3px 5px}.wheel-center{width:60px;height:60px}}
+@media(max-width:420px){.wheel-wrap{width:min(320px,86vw)}.wheel-label{font-size:9px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div><h1>ROLETA</h1><p class="sub">Decision engine — projetos primeiro, distrações depois.</p></div>
+<div class="small muted">Persistência local automática</div>
+</header>
+<div class="grid">
+<section class="panel">
+<h2>Categorias</h2>
+<div id="cats" class="cats"></div>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<div class="small muted">Ciclo atual</div>
+<div id="progress" style="margin-top:5px"></div>
+</section>
+<section class="panel">
+<div class="row between">
+<div><h2 id="title">Jogos</h2><div id="count" class="small muted"></div></div>
+<button id="resetCycle">↻ Novo ciclo</button>
+</div>
+<form id="addForm">
+<input id="newItem" placeholder="Adicionar opção..." autocomplete="off">
+<button class="primary">+ Adicionar</button>
+</form>
+<div id="list" class="list"></div>
+<div class="center" style="margin-top:18px">
+<div class="wheel-wrap">
+<div class="pointer"></div>
+<div id="wheel" class="wheel">
+<div class="wheel-center"><span>S1GN</span></div>
+</div>
+</div>
+<button id="spin" class="primary" style="font-size:17px;padding:12px 28px">🎲 GIRAR</button>
+<div id="result" class="result"><span class="muted">Nenhum resultado.</span></div>
+<div id="resultActions" class="actions hidden">
+<button id="confirm">✓ Confirmar</button>
+<button id="reject">↩ Rejeitar</button>
+<button id="cancel">✕ Cancelar</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body>
+</html>

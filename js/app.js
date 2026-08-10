@@ -12,10 +12,7 @@ const defaultData = {
   history: []
 };
 
-let data =
-  JSON.parse(localStorage.getItem(KEY) || "null") ||
-  defaultData;
-
+let data = JSON.parse(localStorage.getItem(KEY) || "null") || defaultData;
 let cat = Object.keys(data.categories)[1];
 let pending = null;
 let spinning = false;
@@ -29,13 +26,8 @@ async function updateRichPresence(details) {
   try {
     const response = await fetch("http://127.0.0.1:6464/presence", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        details,
-        state: "Working on a Project."
-      })
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({details, state: "Working on a Project."})
     });
 
     const result = await response.json();
@@ -66,19 +58,15 @@ function renderCats() {
 
   Object.keys(data.categories).forEach(c => {
     const b = document.createElement("button");
-
     b.className = "cat" + (c === cat ? " active" : "");
     b.textContent = c;
 
     b.onclick = () => {
       if (spinning) return;
-
       cat = c;
       pending = null;
-
       ensure();
       render();
-
       updateRichPresence("Creating The S1gn.");
     };
 
@@ -106,9 +94,7 @@ function render() {
 
   all.forEach(x => {
     const d = document.createElement("div");
-
-    d.className =
-      "item" + (c.sorted.includes(x) ? " done" : "");
+    d.className = "item" + (c.sorted.includes(x) ? " done" : "");
 
     const s = document.createElement("span");
     s.textContent = x;
@@ -120,18 +106,11 @@ function render() {
 
     del.onclick = () => {
       if (confirm(`Remover “${x}”?`)) {
-        data.categories[cat] =
-          all.filter(y => y !== x);
-
-        c.available =
-          c.available.filter(y => y !== x);
-
-        c.sorted =
-          c.sorted.filter(y => y !== x);
-
+        data.categories[cat] = all.filter(y => y !== x);
+        c.available = c.available.filter(y => y !== x);
+        c.sorted = c.sorted.filter(y => y !== x);
         save();
         render();
-
         updateRichPresence("Creating The S1gn.");
       }
     };
@@ -155,15 +134,12 @@ document.querySelector("#addForm").onsubmit = e => {
   }
 
   data.categories[cat].push(x);
-
   ensure();
   data.cycles[cat].available.push(x);
-
   save();
 
   inp.value = "";
   render();
-
   updateRichPresence("Creating The S1gn.");
 };
 
@@ -176,20 +152,15 @@ document.querySelector("#resetCycle").onclick = () => {
   };
 
   pending = null;
-
   save();
   render();
-
   showResult("Ciclo reiniciado.");
-
   updateRichPresence("Resetting The Cycle.");
 };
 
 function showResult(t) {
   document.querySelector("#result").innerHTML =
-    t
-      ? `<strong>${t}</strong>`
-      : `<span class="muted">Nenhum resultado.</span>`;
+    t ? `<strong>${t}</strong>` : `<span class="muted">Nenhum resultado.</span>`;
 }
 
 document.querySelector("#spin").onclick = () => {
@@ -200,46 +171,31 @@ document.querySelector("#spin").onclick = () => {
   const a = data.cycles[cat].available;
 
   if (!a.length) {
-    alert(
-      "Não há opções disponíveis. Inicie um novo ciclo."
-    );
+    alert("Não há opções disponíveis. Inicie um novo ciclo.");
     return;
   }
 
   spinning = true;
-
   document.querySelector("#spin").disabled = true;
-
-  document
-    .querySelector("#resultActions")
-    .classList.add("hidden");
+  document.querySelector("#resultActions").classList.add("hidden");
 
   updateRichPresence("Spinning The Roulette.");
 
-  pending =
-    a[Math.floor(Math.random() * a.length)];
+  pending = a[Math.floor(Math.random() * a.length)];
 
   const idx = a.indexOf(pending);
   const slice = 360 / a.length;
 
-  rotation +=
-    1440 +
-    (360 - (idx + 0.5) * slice);
+  rotation += 1440 + (360 - (idx + 0.5) * slice);
 
   document.querySelector("#wheel").style.transform =
     `rotate(${rotation}deg)`;
 
   setTimeout(() => {
     spinning = false;
-
     document.querySelector("#spin").disabled = false;
-
     showResult(pending);
-
-    document
-      .querySelector("#resultActions")
-      .classList.remove("hidden");
-
+    document.querySelector("#resultActions").classList.remove("hidden");
     updateRichPresence("Reviewing The Result.");
   }, 3250);
 };
@@ -249,9 +205,7 @@ document.querySelector("#confirm").onclick = () => {
 
   const c = data.cycles[cat];
 
-  c.available =
-    c.available.filter(x => x !== pending);
-
+  c.available = c.available.filter(x => x !== pending);
   c.sorted.push(pending);
 
   data.history.unshift({
@@ -261,15 +215,10 @@ document.querySelector("#confirm").onclick = () => {
   });
 
   data.history = data.history.slice(0, 100);
-
   save();
 
   pending = null;
-
-  document
-    .querySelector("#resultActions")
-    .classList.add("hidden");
-
+  document.querySelector("#resultActions").classList.add("hidden");
   render();
 
   updateRichPresence("Decision Confirmed.");
@@ -277,31 +226,18 @@ document.querySelector("#confirm").onclick = () => {
 
 document.querySelector("#reject").onclick = () => {
   pending = null;
-
-  document
-    .querySelector("#resultActions")
-    .classList.add("hidden");
-
-  showResult(
-    "Resultado devolvido ao conjunto."
-  );
-
+  document.querySelector("#resultActions").classList.add("hidden");
+  showResult("Resultado devolvido ao conjunto.");
   updateRichPresence("Reconsidering The Result.");
 };
 
 document.querySelector("#cancel").onclick = () => {
   pending = null;
-
-  document
-    .querySelector("#resultActions")
-    .classList.add("hidden");
-
+  document.querySelector("#resultActions").classList.add("hidden");
   showResult(null);
-
   updateRichPresence("Creating The S1gn.");
 };
 
 ensure();
 render();
-
 updateRichPresence("Creating The S1gn.");
