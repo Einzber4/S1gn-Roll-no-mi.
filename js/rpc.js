@@ -4,7 +4,7 @@ const crypto = require("crypto");
 
 const CLIENT_ID = "1094444539638452304";
 const HTTP_HOST = "127.0.0.1";
-const HTTP_PORT = 6463;
+const HTTP_PORT = 6464;
 
 let socket = null;
 let connected = false;
