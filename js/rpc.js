@@ -5,63 +5,34 @@ const fs = require("fs");
 const path = require("path");
 const RPC = require("discord-rpc");
 
-/* ==================================================
-   CONFIGURATION
-================================================== */
-
 const HOST = "127.0.0.1";
 const PORT = 6464;
 
-const CLIENT_ID =
-  process.env.DISCORD_CLIENT_ID;
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 
-if (
-  !CLIENT_ID ||
-  !/^\d{17,20}$/.test(CLIENT_ID)
-) {
-  console.error(
-    "[RPC] DISCORD_CLIENT_ID ausente ou inválido."
-  );
-
-  process.exit(1);
-}
-
-/* ==================================================
-   SECURITY LIMITS
-================================================== */
-
+const ALLOWED_ORIGIN = "http://127.0.0.1:5500";
 const MAX_BODY_SIZE = 16 * 1024;
-const MAX_DETAILS_LENGTH = 128;
-const MAX_STATE_LENGTH = 128;
+const MAX_DETAILS = 128;
+const MAX_STATE = 128;
 
 const RATE_WINDOW = 1000;
 const MAX_REQUESTS = 10;
 
-let requestCount = 0;
-let rateWindowStart = Date.now();
+const LOCK_FILE = path.join(__dirname, ".rpc.lock");
 
-/* ==================================================
-   ALLOWED ORIGIN
-================================================== */
+let rpc = null;
+let rpcReady = false;
+let requests = 0;
+let rateStart = Date.now();
+let lockOwned = false;
 
-const ALLOWED_ORIGIN =
-  "http://127.0.0.1:5500";
+if (!CLIENT_ID || !/^\d{17,20}$/.test(CLIENT_ID)) {
+  console.error("[RPC] DISCORD_CLIENT_ID ausente ou inválido.");
+  process.exit(1);
+}
 
-/* ==================================================
-   INSTANCE LOCK
-================================================== */
-
-const LOCK_FILE = path.join(
-  __dirname,
-  ".rpc.lock"
-);
-
-let lockAcquired = false;
-
-function processExists(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) {
-    return false;
-  }
+function pidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
 
   try {
     process.kill(pid, 0);
@@ -73,405 +44,414 @@ function processExists(pid) {
 
 function acquireLock() {
   try {
-    const fd = fs.openSync(
-      LOCK_FILE,
-      "wx"
-    );
-
     fs.writeFileSync(
-      fd,
+      LOCK_FILE,
       JSON.stringify({
         pid: process.pid,
         startedAt: new Date().toISOString()
       }),
-      "utf8"
+      {
+        encoding: "utf8",
+        flag: "wx"
+      }
     );
 
-    fs.closeSync(fd);
-
-    lockAcquired = true;
-
-    console.log(
-      `[RPC] Instance Lock: ACTIVE (${process.pid})`
-    );
-
+    lockOwned = true;
+    console.log("[RPC] Instance Lock: ACTIVE");
     return true;
-
   } catch (error) {
-
     if (error.code !== "EEXIST") {
-      console.error(
-        "[RPC] Não foi possível criar o Instance Lock."
-      );
-
+      console.error("[RPC] Falha ao criar Instance Lock.");
       return false;
     }
 
-    let lock;
-
     try {
-      lock = JSON.parse(
-        fs.readFileSync(
-          LOCK_FILE,
-          "utf8"
-        )
+      const lock = JSON.parse(
+        fs.readFileSync(LOCK_FILE, "utf8")
       );
-    } catch {
 
+      if (pidAlive(Number(lock.pid))) {
+        console.error("[RPC] Outra instância já está ativa.");
+        return false;
+      }
+
+      fs.unlinkSync(LOCK_FILE);
+      return acquireLock();
+    } catch {
       try {
-        fs.unlinkSync(
-          LOCK_FILE
-        );
+        fs.unlinkSync(LOCK_FILE);
       } catch {}
 
       return acquireLock();
     }
-
-    const pid =
-      Number(lock.pid);
-
-    if (processExists(pid)) {
-
-      console.error(
-        "[RPC] INSTANCE LOCK BLOQUEADO."
-      );
-
-      console.error(
-        `[RPC] Processo ativo: ${pid}`
-      );
-
-      return false;
-    }
-
-    console.warn(
-      "[RPC] Removendo Instance Lock órfão."
-    );
-
-    try {
-      fs.unlinkSync(
-        LOCK_FILE
-      );
-    } catch {}
-
-    return acquireLock();
   }
 }
 
 function releaseLock() {
-  if (!lockAcquired) {
-    return;
-  }
+  if (!lockOwned) return;
 
   try {
-
     const lock = JSON.parse(
-      fs.readFileSync(
-        LOCK_FILE,
-        "utf8"
-      )
+      fs.readFileSync(LOCK_FILE, "utf8")
     );
 
-    if (
-      Number(lock.pid) !==
-      process.pid
-    ) {
-      return;
+    if (Number(lock.pid) === process.pid) {
+      fs.unlinkSync(LOCK_FILE);
     }
-
-    fs.unlinkSync(
-      LOCK_FILE
-    );
-
-    lockAcquired = false;
-
-    console.log(
-      "[RPC] Instance Lock: RELEASED"
-    );
-
   } catch {}
+
+  lockOwned = false;
 }
 
-if (!acquireLock()) {
-  process.exit(1);
-}
+function rateLimited() {
+  const now = Date.now();
 
-/* ==================================================
-   DISCORD RPC
-================================================== */
-
-let rpc = null;
-let rpcReady = false;
-
-async function connectRPC() {
-
-  if (
-    rpc &&
-    rpcReady
-  ) {
-    return;
+  if (now - rateStart >= RATE_WINDOW) {
+    rateStart = now;
+    requests = 0;
   }
 
-  rpc =
-    new RPC.Client({
-      transport: "ipc"
+  requests++;
+
+  return requests > MAX_REQUESTS;
+}
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    let size = 0;
+    let done = false;
+
+    req.setEncoding("utf8");
+
+    req.on("data", chunk => {
+      if (done) return;
+
+      size += Buffer.byteLength(chunk, "utf8");
+
+      if (size > MAX_BODY_SIZE) {
+        done = true;
+
+        reject({
+          status: 413,
+          message: "Request body too large."
+        });
+
+        req.destroy();
+        return;
+      }
+
+      body += chunk;
     });
 
-  rpc.on(
-    "ready",
-    () => {
+    req.on("end", () => {
+      if (done) return;
 
-      rpcReady = true;
+      done = true;
+      resolve(body);
+    });
 
-      console.log(
-        "[RPC] Discord IPC: CONNECTED"
-      );
-    }
-  );
+    req.on("error", error => {
+      if (done) return;
 
-  rpc.on(
-    "disconnected",
-    () => {
+      done = true;
 
-      rpcReady = false;
+      reject({
+        status: 400,
+        message: error.message
+      });
+    });
+  });
+}
 
-      console.warn(
-        "[RPC] Discord IPC: DISCONNECTED"
-      );
-    }
-  );
+function validatePayload(data) {
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data)
+  ) {
+    return null;
+  }
 
-  rpc.on(
-    "error",
-    error => {
+  const keys = Object.keys(data);
 
-      rpcReady = false;
+  if (
+    keys.some(
+      key => key !== "details" && key !== "state"
+    )
+  ) {
+    return null;
+  }
 
-      console.error(
-        "[RPC] Discord IPC ERROR:",
-        error.message
-      );
-    }
-  );
+  if (
+    typeof data.details !== "string" ||
+    data.details.length === 0 ||
+    data.details.length > MAX_DETAILS
+  ) {
+    return null;
+  }
+
+  if (
+    data.state !== undefined &&
+    (
+      typeof data.state !== "string" ||
+      data.state.length > MAX_STATE
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    details: data.details,
+    state: data.state ?? "Working on a Project."
+  };
+}
+
+async function connectRPC() {
+  if (rpc && rpcReady) return;
+
+  rpc = new RPC.Client({
+    transport: "ipc"
+  });
+
+  rpc.on("ready", () => {
+    rpcReady = true;
+    console.log("[RPC] Discord IPC: CONNECTED");
+  });
+
+  rpc.on("disconnected", () => {
+    rpcReady = false;
+    console.warn("[RPC] Discord IPC: DISCONNECTED");
+  });
+
+  rpc.on("error", error => {
+    rpcReady = false;
+    console.error(
+      "[RPC] Discord IPC ERROR:",
+      error.message
+    );
+  });
 
   await rpc.login({
     clientId: CLIENT_ID
   });
 }
 
-/* ==================================================
-   RATE LIMIT
-================================================== */
-
-function isRateLimited() {
-
-  const now = Date.now();
-
-  if (
-    now - rateWindowStart >=
-    RATE_WINDOW
-  ) {
-    rateWindowStart = now;
-    requestCount = 0;
-  }
-
-  requestCount++;
-
-  return (
-    requestCount >
-    MAX_REQUESTS
-  );
-}
-
-/* ==================================================
-   BODY LIMIT
-================================================== */
-
-function readLimitedBody(req) {
-
-  return new Promise(
-    (resolve, reject) => {
-
-      let body = "";
-      let size = 0;
-      let finished = false;
-
-      req.setEncoding("utf8");
-
-      req.on(
-        "data",
-        chunk => {
-
-          if (finished) {
-            return;
-          }
-
-          size += Buffer.byteLength(
-            chunk,
-            "utf8"
-          );
-
-          if (
-            size >
-            MAX_BODY_SIZE
-          ) {
-
-            finished = true;
-
-            reject({
-              status: 413,
-              message:
-                "Request body too large."
-            });
-
-            req.destroy();
-
-            return;
-          }
-
-          body += chunk;
-        }
-      );
-
-      req.on(
-        "end",
-        () => {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          resolve(body);
-        }
-      );
-
-      req.on(
-        "error",
-        error => {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          reject({
-            status: 400,
-            message: error.message
-          });
-        }
-      );
-    }
-  );
-}
-
-/* ==================================================
-   PAYLOAD VALIDATION
-================================================== */
-
-function validatePayload(payload) {
-
-  if (
-    !payload ||
-    typeof payload !== "object" ||
-    Array.isArray(payload)
-  ) {
-    return {
-      valid: false,
-      error: "Invalid payload."
-    };
-  }
-
-  const keys =
-    Object.keys(payload);
-
-  const allowed = [
-    "details",
-    "state"
-  ];
-
-  for (const key of keys) {
-
-    if (!allowed.includes(key)) {
-
-      return {
-        valid: false,
-        error:
-          "Unauthorized payload property."
-      };
-    }
-  }
-
-  const {
-    details,
-    state
-  } = payload;
-
-  if (
-    typeof details !== "string" ||
-    details.length === 0 ||
-    details.length >
-      MAX_DETAILS_LENGTH
-  ) {
-
-    return {
-      valid: false,
-      error:
-        "Invalid details."
-    };
-  }
-
-  if (
-    state !== undefined &&
-    (
-      typeof state !== "string" ||
-      state.length >
-        MAX_STATE_LENGTH
-    )
-  ) {
-
-    return {
-      valid: false,
-      error:
-        "Invalid state."
-    };
-  }
-
-  return {
-    valid: true,
-    details,
-    state:
-      state ??
-      "Working on a Project."
-  };
-}
-
-/* ==================================================
-   ACTIVITY
-================================================== */
-
-async function updateActivity(
-  details,
-  state
-) {
-
+async function setPresence(details, state) {
   await connectRPC();
 
-  if (
-    !rpc ||
-    !rpcReady
-  ) {
-    throw new Error(
-      "Discord RPC unavailable."
-    );
+  if (!rpcReady) {
+    throw new Error("Discord RPC unavailable.");
   }
 
   await rpc.setActivity({
-
     details,
-
     state,
 
-    largeImageKey:
-      "
+    largeImageKey: "s1gn-tool-no-mi",
+    largeImageText: "S1gn-Tool-No-Mi.",
+
+    smallImageKey: "einzbern",
+    smallImageText: "Einzbern",
+
+    instance: false
+  });
+}
+
+function json(res, status, data) {
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer"
+  });
+
+  res.end(JSON.stringify(data));
+}
+
+const server = http.createServer(async (req, res) => {
+  if (req.method === "OPTIONS") {
+    if (req.headers.origin !== ALLOWED_ORIGIN) {
+      res.writeHead(403);
+      res.end();
+      return;
+    }
+
+    res.writeHead(204, {
+      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "600"
+    });
+
+    res.end();
+    return;
+  }
+
+  if (
+    req.method !== "POST" ||
+    req.url !== "/presence"
+  ) {
+    json(res, 404, {
+      success: false,
+      error: "Not found."
+    });
+
+    return;
+  }
+
+  if (req.headers.origin !== ALLOWED_ORIGIN) {
+    json(res, 403, {
+      success: false,
+      error: "Forbidden."
+    });
+
+    return;
+  }
+
+  if (rateLimited()) {
+    json(res, 429, {
+      success: false,
+      error: "Too many requests."
+    });
+
+    return;
+  }
+
+  const contentType =
+    req.headers["content-type"] || "";
+
+  if (
+    !contentType
+      .toLowerCase()
+      .startsWith("application/json")
+  ) {
+    json(res, 415, {
+      success: false,
+      error: "Unsupported media type."
+    });
+
+    return;
+  }
+
+  const contentLength =
+    Number(req.headers["content-length"]);
+
+  if (
+    Number.isFinite(contentLength) &&
+    contentLength > MAX_BODY_SIZE
+  ) {
+    json(res, 413, {
+      success: false,
+      error: "Request body too large."
+    });
+
+    req.destroy();
+    return;
+  }
+
+  let raw;
+
+  try {
+    raw = await readBody(req);
+  } catch (error) {
+    json(res, error.status || 400, {
+      success: false,
+      error:
+        error.status === 413
+          ? "Request body too large."
+          : "Invalid request."
+    });
+
+    return;
+  }
+
+  let data;
+
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    json(res, 400, {
+      success: false,
+      error: "Invalid JSON."
+    });
+
+    return;
+  }
+
+  const payload = validatePayload(data);
+
+  if (!payload) {
+    json(res, 400, {
+      success: false,
+      error: "Invalid payload."
+    });
+
+    return;
+  }
+
+  try {
+    await setPresence(
+      payload.details,
+      payload.state
+    );
+
+    json(res, 200, {
+      success: true
+    });
+  } catch (error) {
+    console.error(
+      "[RPC] Presence error:",
+      error.message
+    );
+
+    json(res, 503, {
+      success: false,
+      error: "Discord RPC unavailable."
+    });
+  }
+});
+
+if (!acquireLock()) {
+  process.exit(1);
+}
+
+server.listen(PORT, HOST, async () => {
+  console.log("==========================================");
+  console.log(" S1GN TOOL NO MI — RPC BRIDGE");
+  console.log("==========================================");
+  console.log(`[RPC] Listening: ${HOST}:${PORT}`);
+  console.log(`[RPC] PID: ${process.pid}`);
+  console.log("[RPC] Client ID: PROTECTED");
+  console.log("[RPC] Instance Lock: ACTIVE");
+  console.log("[RPC] Body Limit: 16 KB");
+  console.log("[RPC] Origin Validation: ACTIVE");
+  console.log("[RPC] Rate Limit: ACTIVE");
+  console.log("[RPC] /status: DISABLED");
+
+  try {
+    await connectRPC();
+  } catch {
+    console.warn("[RPC] Discord IPC unavailable.");
+  }
+});
+
+function shutdown(signal) {
+  console.log(`[RPC] ${signal} received.`);
+
+  try {
+    if (rpc) {
+      rpc.destroy();
+    }
+  } catch {}
+
+  server.close(() => {
+    releaseLock();
+    console.log("[RPC] Bridge stopped.");
+    process.exit(0);
+  });
+}
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("exit", releaseLock);
