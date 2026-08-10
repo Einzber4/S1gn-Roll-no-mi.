@@ -3,6 +3,7 @@ const http = require("http");
 const crypto = require("crypto");
 
 const CLIENT_ID = "1094444539638452304";
+
 const HTTP_HOST = "127.0.0.1";
 const HTTP_PORT = 6464;
 
@@ -11,14 +12,24 @@ let connected = false;
 let reconnectTimer = null;
 
 const presence = {
+    type: 0,
+
     details: "Designing The S1gn.",
     state: "Working on a Project.",
+
     start: Math.floor(Date.now() / 1000),
+
     large_image: "lumine",
     large_text: "Lumine",
+
     small_image: "46be7f0b2664921b0eb36197e1b1e492",
     small_text: "Furina"
 };
+
+
+// --------------------------------------------------
+// Utilidades
+// --------------------------------------------------
 
 function createNonce() {
     return crypto.randomUUID();
@@ -26,48 +37,80 @@ function createNonce() {
 
 function sendFrame(opcode, data) {
     if (!socket || !connected) {
+        console.log("[RPC] Não conectado ao Discord.");
         return false;
     }
 
-    const payload = Buffer.from(JSON.stringify(data), "utf8");
+    const payload = Buffer.from(
+        JSON.stringify(data),
+        "utf8"
+    );
 
     const header = Buffer.alloc(8);
+
     header.writeUInt32LE(opcode, 0);
     header.writeUInt32LE(payload.length, 4);
 
-    socket.write(Buffer.concat([header, payload]));
+    socket.write(
+        Buffer.concat([
+            header,
+            payload
+        ])
+    );
 
     return true;
 }
+
+
+// --------------------------------------------------
+// Rich Presence
+// --------------------------------------------------
 
 function updatePresence() {
     if (!connected) {
         return false;
     }
 
+    const activity = {
+        type: presence.type,
+
+        details: presence.details,
+        state: presence.state,
+
+        timestamps: {
+            start: presence.start
+        },
+
+        assets: {
+            large_image: presence.large_image,
+            large_text: presence.large_text,
+
+            small_image: presence.small_image,
+            small_text: presence.small_text
+        }
+    };
+
+    const nonce = createNonce();
+
+    console.log("[RPC] Enviando SET_ACTIVITY...");
+    console.log("[RPC] Nonce:", nonce);
+
     return sendFrame(1, {
         cmd: "SET_ACTIVITY",
-        nonce: createNonce(),
+
+        nonce,
+
         args: {
             pid: process.pid,
-            activity: {
-                details: presence.details,
-                state: presence.state,
-
-                timestamps: {
-                    start: presence.start
-                },
-
-                assets: {
-                    large_image: presence.large_image,
-                    large_text: presence.large_text,
-                    small_image: presence.small_image,
-                    small_text: presence.small_text
-                }
-            }
+            activity
         }
     });
 }
+
+
+// --------------------------------------------------
+// Desconexão
+// --------------------------------------------------
 
 function disconnect() {
     connected = false;
@@ -78,19 +121,31 @@ function disconnect() {
     }
 }
 
-function connectToPipe(index = 0) {
+
+// --------------------------------------------------
+// Conexão com Discord IPC
+// --------------------------------------------------
+
+function connectToDiscord(pipeIndex = 0) {
     if (connected) {
         return;
     }
 
-    if (index > 9) {
-        console.log("[RPC] Discord Desktop não encontrado.");
+    if (pipeIndex > 9) {
+        console.log(
+            "[RPC] Nenhum pipe do Discord foi encontrado."
+        );
 
         scheduleReconnect();
         return;
     }
 
-    const pipe = `\\\\?\\pipe\\discord-ipc-${index}`;
+    const pipe =
+        `\\\\?\\pipe\\discord-ipc-${pipeIndex}`;
+
+    console.log(
+        `[RPC] Tentando Discord IPC pipe ${pipeIndex}...`
+    );
 
     const newSocket = net.createConnection(pipe);
 
@@ -98,13 +153,17 @@ function connectToPipe(index = 0) {
         socket = newSocket;
         connected = true;
 
-        console.log(`[RPC] Conectado ao Discord através do pipe ${index}.`);
+        console.log(
+            `[RPC] Conectado ao Discord através do pipe ${pipeIndex}.`
+        );
 
+        // HANDSHAKE
         sendFrame(0, {
             v: 1,
             client_id: CLIENT_ID
         });
     });
+
 
     newSocket.on("data", buffer => {
         if (buffer.length < 8) {
@@ -115,6 +174,10 @@ function connectToPipe(index = 0) {
         const length = buffer.readUInt32LE(4);
 
         if (buffer.length < 8 + length) {
+            console.log(
+                "[RPC] Frame incompleto recebido."
+            );
+
             return;
         }
 
@@ -122,45 +185,111 @@ function connectToPipe(index = 0) {
             .subarray(8, 8 + length)
             .toString("utf8");
 
+        let payload;
+
         try {
-            const payload = JSON.parse(rawPayload);
-
-            if (payload.evt === "READY") {
-                console.log("[RPC] Discord confirmou a conexão.");
-
-                updatePresence();
-
-                console.log("[RPC] Rich Presence enviado.");
-            }
-
-            if (payload.evt === "ERROR") {
-                console.error("[RPC] Discord retornou um erro:");
-                console.error(payload.data);
-            }
+            payload = JSON.parse(rawPayload);
         } catch (error) {
-            console.error("[RPC] Falha ao interpretar resposta do Discord.");
+            console.error(
+                "[RPC] Não foi possível interpretar a resposta:"
+            );
+
+            console.error(rawPayload);
+
+            return;
         }
 
-        if (opcode === 3) {
-            console.log("[RPC] Evento recebido do Discord.");
+        console.log(
+            "[RPC] Resposta recebida:",
+            payload
+        );
+
+
+        // ------------------------------------------
+        // READY
+        // ------------------------------------------
+
+        if (payload.evt === "READY") {
+            console.log(
+                "[RPC] Discord confirmou a conexão."
+            );
+
+            updatePresence();
+
+            return;
+        }
+
+
+        // ------------------------------------------
+        // ERRO
+        // ------------------------------------------
+
+        if (payload.evt === "ERROR") {
+            console.error(
+                "[RPC] Discord rejeitou uma operação."
+            );
+
+            console.error(
+                "[RPC] Código:",
+                payload.data?.code
+            );
+
+            console.error(
+                "[RPC] Mensagem:",
+                payload.data?.message
+            );
+
+            return;
+        }
+
+
+        // ------------------------------------------
+        // Resposta SET_ACTIVITY
+        // ------------------------------------------
+
+        if (payload.cmd === "SET_ACTIVITY") {
+            console.log(
+                "[RPC] Resposta do SET_ACTIVITY recebida."
+            );
+
+            if (payload.data) {
+                console.log(
+                    "[RPC] Dados:",
+                    payload.data
+                );
+            }
+
+            return;
         }
     });
+
 
     newSocket.once("close", () => {
         if (socket === newSocket) {
             disconnect();
+
+            console.log(
+                "[RPC] Conexão com Discord encerrada."
+            );
+
             scheduleReconnect();
         }
     });
+
 
     newSocket.once("error", () => {
         newSocket.destroy();
 
         if (!connected) {
-            connectToPipe(index + 1);
+            connectToDiscord(pipeIndex + 1);
         }
     });
 }
+
+
+// --------------------------------------------------
+// Reconexão
+// --------------------------------------------------
 
 function scheduleReconnect() {
     if (reconnectTimer) {
@@ -169,87 +298,190 @@ function scheduleReconnect() {
 
     reconnectTimer = setTimeout(() => {
         reconnectTimer = null;
-        connectToPipe(0);
+
+        connectToDiscord(0);
     }, 5000);
 }
 
+
+// --------------------------------------------------
+// Bridge HTTP local
+// --------------------------------------------------
+
 function sendJson(response, status, data) {
     response.writeHead(status, {
-        "Content-Type": "application/json; charset=utf-8",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
+        "Content-Type":
+            "application/json; charset=utf-8",
+
+        "Access-Control-Allow-Origin":
+            "*",
+
+        "Access-Control-Allow-Methods":
+            "GET, POST, OPTIONS",
+
+        "Access-Control-Allow-Headers":
+            "Content-Type"
     });
 
-    response.end(JSON.stringify(data));
+    response.end(
+        JSON.stringify(data)
+    );
 }
 
-const server = http.createServer((request, response) => {
-    if (request.method === "OPTIONS") {
-        sendJson(response, 204, {});
-        return;
-    }
 
-    if (request.method === "GET" && request.url === "/status") {
-        sendJson(response, 200, {
-            connected,
-            presence
-        });
+const server = http.createServer(
+    (request, response) => {
 
-        return;
-    }
+        // ------------------------------------------
+        // CORS
+        // ------------------------------------------
 
-    if (request.method === "POST" && request.url === "/presence") {
-        let body = "";
+        if (request.method === "OPTIONS") {
+            sendJson(
+                response,
+                204,
+                {}
+            );
 
-        request.on("data", chunk => {
-            body += chunk;
-        });
+            return;
+        }
 
-        request.on("end", () => {
-            try {
-                const data = JSON.parse(body);
 
-                if (typeof data.details === "string") {
-                    presence.details = data.details;
-                }
+        // ------------------------------------------
+        // Status
+        // ------------------------------------------
 
-                if (typeof data.state === "string") {
-                    presence.state = data.state;
-                }
-
-                if (typeof data.start === "number") {
-                    presence.start = data.start;
-                }
-
-                updatePresence();
-
-                sendJson(response, 200, {
-                    success: true,
+        if (
+            request.method === "GET" &&
+            request.url === "/status"
+        ) {
+            sendJson(
+                response,
+                200,
+                {
                     connected,
                     presence
-                });
-            } catch {
-                sendJson(response, 400, {
-                    success: false,
-                    error: "JSON inválido."
-                });
+                }
+            );
+
+            return;
+        }
+
+
+        // ------------------------------------------
+        // Atualização da Presence
+        // ------------------------------------------
+
+        if (
+            request.method === "POST" &&
+            request.url === "/presence"
+        ) {
+            let body = "";
+
+            request.on(
+                "data",
+                chunk => {
+                    body += chunk;
+                }
+            );
+
+            request.on(
+                "end",
+                () => {
+                    try {
+                        const data =
+                            JSON.parse(body);
+
+
+                        if (
+                            typeof data.details ===
+                            "string"
+                        ) {
+                            presence.details =
+                                data.details;
+                        }
+
+
+                        if (
+                            typeof data.state ===
+                            "string"
+                        ) {
+                            presence.state =
+                                data.state;
+                        }
+
+
+                        if (
+                            typeof data.start ===
+                            "number"
+                        ) {
+                            presence.start =
+                                data.start;
+                        }
+
+
+                        updatePresence();
+
+
+                        sendJson(
+                            response,
+                            200,
+                            {
+                                success: true,
+                                connected,
+                                presence
+                            }
+                        );
+
+                    } catch {
+                        sendJson(
+                            response,
+                            400,
+                            {
+                                success: false,
+                                error:
+                                    "JSON inválido."
+                            }
+                        );
+                    }
+                }
+            );
+
+            return;
+        }
+
+
+        // ------------------------------------------
+        // 404
+        // ------------------------------------------
+
+        sendJson(
+            response,
+            404,
+            {
+                success: false,
+                error:
+                    "Endpoint não encontrado."
             }
-        });
-
-        return;
+        );
     }
+);
 
-    sendJson(response, 404, {
-        success: false,
-        error: "Endpoint não encontrado."
-    });
-});
 
-server.listen(HTTP_PORT, HTTP_HOST, () => {
-    console.log(
-        `[RPC] Bridge iniciada em http://${HTTP_HOST}:${HTTP_PORT}`
-    );
+// --------------------------------------------------
+// Inicialização
+// --------------------------------------------------
 
-    connectToPipe(0);
-});
+server.listen(
+    HTTP_PORT,
+    HTTP_HOST,
+    () => {
+
+        console.log(
+            `[RPC] Bridge iniciada em ` +
+            `http://${HTTP_HOST}:${HTTP_PORT}`
+        );
+
+        connectToDiscord(0);
+    }
+);
