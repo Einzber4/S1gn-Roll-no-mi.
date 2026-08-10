@@ -39,6 +39,13 @@ let data =
 
 let selectedCategory = "Problemas / Dúvidas";
 
+/*
+ * Cache da Roleta:
+ * evita reconstruir os nomes quando categoria/opções
+ * não sofreram alteração.
+ */
+let lastWheelSignature = "";
+
 /* ==================================================
    Persistência
    ================================================== */
@@ -62,72 +69,81 @@ function renderWheelNames() {
 
   if (!wheel) return;
 
+  const options =
+    data.categories[selectedCategory] || [];
+
+  /*
+   * Somente os cinco primeiros nomes participam
+   * da representação visual da Roleta existente.
+   */
+  const visibleOptions = options.slice(0, 5);
+
+  /*
+   * Se nada mudou, não reconstruímos os elementos.
+   */
+  const signature =
+    `${selectedCategory}|${visibleOptions.join("\u001f")}`;
+
+  if (signature === lastWheelSignature) {
+    return;
+  }
+
+  lastWheelSignature = signature;
+
   /*
    * Remove somente os nomes anteriores.
-   * O background/conic-gradient permanece intacto.
+   * O conic-gradient e a própria Roleta permanecem intactos.
    */
   wheel
     .querySelectorAll(".wheel-label")
     .forEach(label => label.remove());
 
-  const options =
-    data.categories[selectedCategory] || [];
-
-  /*
-   * A Roleta anterior possui 5 setores.
-   * Portanto, cada posição abaixo corresponde a
-   * um setor já existente.
-   *
-   * Não modificamos os setores.
-   */
   /*
    * A Roleta possui 5 setores iguais.
    * Cada nome é colocado no centro geométrico
-   * do seu respectivo setor.
-   *
-   * 0° = topo; os setores seguem no sentido horário.
+   * do respectivo setor.
    */
   const totalSectors = 5;
   const slice = 360 / totalSectors;
   const radius = 30;
 
-  const positions = Array.from(
-    { length: totalSectors },
-    (_, index) => {
-      const angle = index * slice + slice / 2;
-      const radians = (angle - 90) * Math.PI / 180;
-
-      return {
-        left: `${50 + Math.cos(radians) * radius}%`,
-        top: `${50 + Math.sin(radians) * radius}%`,
-        transform: "translate(-50%, -50%)"
-      };
-    }
-  );
-
   /*
-   * Somente os nomes existentes são exibidos.
-   * Setores sem alternativa permanecem sem texto.
+   * Fragment evita múltiplas inserções no DOM.
    */
-  options.slice(0, 5).forEach((option, index) => {
-    const label = document.createElement("div");
+  const fragment = document.createDocumentFragment();
+
+  visibleOptions.forEach((option, index) => {
+    const angle =
+      index * slice + slice / 2;
+
+    const radians =
+      (angle - 90) * Math.PI / 180;
+
+    const label =
+      document.createElement("div");
 
     label.className = "wheel-label";
 
     label.style.position = "absolute";
-    label.style.left = positions[index].left;
-    label.style.top = positions[index].top;
-    label.style.transform = positions[index].transform;
+    label.style.left =
+      `${50 + Math.cos(radians) * radius}%`;
+    label.style.top =
+      `${50 + Math.sin(radians) * radius}%`;
+    label.style.transform =
+      "translate(-50%, -50%)";
     label.style.width = "25%";
     label.style.textAlign = "center";
 
-    const text = document.createElement("span");
+    const text =
+      document.createElement("span");
 
     text.textContent = option;
 
     label.appendChild(text);
-    wheel.appendChild(label);
+    fragment.appendChild(label);
   });
+
+  wheel.appendChild(fragment);
 }
 
 /* ==================================================
@@ -138,6 +154,8 @@ function selectCategory(category) {
   if (!data.categories[category]) return;
 
   selectedCategory = category;
+
+  lastWheelSignature = "";
 
   renderCategories();
   renderOptions();
@@ -252,6 +270,8 @@ if (addForm) {
     }
 
     options.push(value);
+
+    lastWheelSignature = "";
 
     input.value = "";
 
