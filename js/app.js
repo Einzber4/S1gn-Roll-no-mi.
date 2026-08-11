@@ -1,21 +1,10 @@
 /* ==================================================
-   EINZBERN ROULETTE — V1.0.6
-   app.js — Apenas nomes na Roleta
-   ==================================================
-   IMPORTANTE:
-   - Mantém a Roleta anterior com 5 setores fixos.
-   - NÃO altera o conic-gradient.
-   - NÃO altera a quantidade de setores.
-   - NÃO altera o mecanismo de sorteio.
-   - Apenas adiciona os nomes das alternativas aos setores.
+   EINZBERN ROULETTE — V1.0.7
+   app.js — Roll restaurado
    ================================================== */
 
 const KEY = "einzbern-roulette-v1";
 
-/*
- * Estrutura existente.
- * Mantenha os dados já utilizados pelo projeto.
- */
 const defaultData = {
   categories: {
     "Problemas / Dúvidas": ["Questão para analisar"],
@@ -38,49 +27,47 @@ let data =
   defaultData;
 
 let selectedCategory = "Problemas / Dúvidas";
-
-/*
- * Cache da Roleta:
- * evita reconstruir os nomes quando categoria/opções
- * não sofreram alteração.
- */
 let lastWheelSignature = "";
+let spinning = false;
+let currentRotation = 0;
+let pendingResult = null;
+
 
 /* ==================================================
-   Persistência
+   PERSISTÊNCIA
    ================================================== */
 
 function save() {
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
-/* ==================================================
-   Nomes da Roleta
-   ==================================================
-   A Roleta continua exatamente com os 5 setores
-   definidos anteriormente.
 
-   Esta função NÃO recria a Roleta.
-   Ela somente coloca os nomes sobre os setores.
+/* ==================================================
+   ELEMENTOS
+   ================================================== */
+
+const wheel = document.querySelector("#wheel");
+const spinButton = document.querySelector("#spin");
+const result = document.querySelector("#result");
+const resultActions = document.querySelector("#resultActions");
+
+const confirmButton = document.querySelector("#confirm");
+const rejectButton = document.querySelector("#reject");
+const cancelButton = document.querySelector("#cancel");
+
+
+/* ==================================================
+   NOMES DA ROLETA
    ================================================== */
 
 function renderWheelNames() {
-  const wheel = document.querySelector("#wheel");
-
   if (!wheel) return;
 
   const options =
     data.categories[selectedCategory] || [];
 
-  /*
-   * Somente os cinco primeiros nomes participam
-   * da representação visual da Roleta existente.
-   */
   const visibleOptions = options.slice(0, 5);
 
-  /*
-   * Se nada mudou, não reconstruímos os elementos.
-   */
   const signature =
     `${selectedCategory}|${visibleOptions.join("\u001f")}`;
 
@@ -90,27 +77,16 @@ function renderWheelNames() {
 
   lastWheelSignature = signature;
 
-  /*
-   * Remove somente os nomes anteriores.
-   * O conic-gradient e a própria Roleta permanecem intactos.
-   */
   wheel
     .querySelectorAll(".wheel-label")
     .forEach(label => label.remove());
 
-  /*
-   * A Roleta possui 5 setores iguais.
-   * Cada nome é colocado no centro geométrico
-   * do respectivo setor.
-   */
   const totalSectors = 5;
   const slice = 360 / totalSectors;
   const radius = 30;
 
-  /*
-   * Fragment evita múltiplas inserções no DOM.
-   */
-  const fragment = document.createDocumentFragment();
+  const fragment =
+    document.createDocumentFragment();
 
   visibleOptions.forEach((option, index) => {
     const angle =
@@ -127,10 +103,13 @@ function renderWheelNames() {
     label.style.position = "absolute";
     label.style.left =
       `${50 + Math.cos(radians) * radius}%`;
+
     label.style.top =
       `${50 + Math.sin(radians) * radius}%`;
+
     label.style.transform =
       "translate(-50%, -50%)";
+
     label.style.width = "25%";
     label.style.textAlign = "center";
 
@@ -146,25 +125,23 @@ function renderWheelNames() {
   wheel.appendChild(fragment);
 }
 
+
 /* ==================================================
-   Seleção de categoria
+   CATEGORIAS
    ================================================== */
 
 function selectCategory(category) {
   if (!data.categories[category]) return;
 
   selectedCategory = category;
-
   lastWheelSignature = "";
+  pendingResult = null;
 
+  hideResultActions();
   renderCategories();
   renderOptions();
   renderWheelNames();
 }
-
-/* ==================================================
-   Categorias
-   ================================================== */
 
 function renderCategories() {
   const container =
@@ -180,22 +157,26 @@ function renderCategories() {
 
     button.className =
       "cat" +
-      (category === selectedCategory
-        ? " active"
-        : "");
+      (
+        category === selectedCategory
+          ? " active"
+          : ""
+      );
 
     button.textContent = category;
 
-    button.addEventListener("click", () => {
-      selectCategory(category);
-    });
+    button.addEventListener(
+      "click",
+      () => selectCategory(category)
+    );
 
     container.appendChild(button);
   });
 }
 
+
 /* ==================================================
-   Lista de alternativas
+   LISTA DE OPÇÕES
    ================================================== */
 
 function renderOptions() {
@@ -221,7 +202,6 @@ function renderOptions() {
     name.textContent = option;
 
     item.appendChild(name);
-
     list.appendChild(item);
   });
 
@@ -237,60 +217,130 @@ function renderOptions() {
     document.querySelector("#title");
 
   if (title) {
-    title.textContent = selectedCategory;
+    title.textContent =
+      selectedCategory;
   }
 }
 
+
 /* ==================================================
-   Adicionar alternativa
+   ADICIONAR OPÇÃO
    ================================================== */
 
 const addForm =
   document.querySelector("#addForm");
 
 if (addForm) {
-  addForm.addEventListener("submit", event => {
-    event.preventDefault();
+  addForm.addEventListener(
+    "submit",
+    event => {
+      event.preventDefault();
 
-    const input =
-      document.querySelector("#newItem");
+      const input =
+        document.querySelector("#newItem");
 
-    if (!input) return;
+      if (!input) return;
 
-    const value =
-      input.value.trim();
+      const value =
+        input.value.trim();
 
-    if (!value) return;
+      if (!value) return;
 
-    const options =
-      data.categories[selectedCategory];
+      const options =
+        data.categories[selectedCategory];
 
-    if (options.includes(value)) {
-      return;
+      if (options.includes(value)) {
+        return;
+      }
+
+      options.push(value);
+
+      lastWheelSignature = "";
+      input.value = "";
+
+      save();
+
+      renderOptions();
+      renderWheelNames();
     }
-
-    options.push(value);
-
-    lastWheelSignature = "";
-
-    input.value = "";
-
-    save();
-
-    renderOptions();
-    renderWheelNames();
-  });
+  );
 }
 
+
 /* ==================================================
-   Inicialização
+   RESULTADO
    ================================================== */
 
-renderCategories();
-renderOptions();
+function showResult(option) {
+  if (!result) return;
 
-/*
- * ÚNICA alteração desta versão:
- * adicionar os nomes à Roleta existente.
- */
-renderWheelNames();
+  result.innerHTML = "";
+
+  const strong =
+    document.createElement("strong");
+
+  strong.textContent = option;
+
+  result.appendChild(strong);
+}
+
+function clearResult() {
+  if (!result) return;
+
+  result.innerHTML =
+    '<span class="muted">Nenhum resultado.</span>';
+}
+
+function showResultActions() {
+  if (!resultActions) return;
+
+  resultActions.classList.remove("hidden");
+}
+
+function hideResultActions() {
+  if (!resultActions) return;
+
+  resultActions.classList.add("hidden");
+}
+
+
+/* ==================================================
+   ROLL
+   ================================================== */
+
+function spinWheel() {
+  if (!wheel || !spinButton || spinning) {
+    return;
+  }
+
+  const options =
+    data.categories[selectedCategory] || [];
+
+  /*
+   * A Roleta visual possui cinco setores.
+   * Apenas as opções existentes participam do Roll.
+   */
+  const visibleOptions =
+    options.slice(0, 5);
+
+  if (visibleOptions.length === 0) {
+    showResult(
+      "Adicione pelo menos uma opção."
+    );
+
+    return;
+  }
+
+  spinning = true;
+  pendingResult = null;
+
+  hideResultActions();
+
+  spinButton.disabled = true;
+
+  const selectedIndex =
+    Math.floor(
+      Math.random() * visibleOptions.length
+    );
+
+  const slice = 
