@@ -1,6 +1,6 @@
 /* ==================================================
    EINZBERN ROULETTE — V1.0.6
-   CSS — Interface + Wheel Contrast Revision
+   CSS — Cinzel Typography Revision
    ================================================== */
 
 :root{
@@ -26,7 +26,8 @@ body{
       #090b10 45%
     );
   color:var(--text);
-  font:15px system-ui,-apple-system,Segoe UI,sans-serif;
+  font-family:"Cinzel",serif;
+  font-size:15px;
   min-height:100vh;
 }
 
@@ -239,6 +240,7 @@ form{
 
   color:#ffffff;
 
+  font-family:"Cinzel",serif;
   font-size:12px;
   font-weight:700;
 
@@ -355,51 +357,3 @@ form{
   flex-wrap:wrap;
   justify-content:center;
   gap:8px;
-}
-
-.hidden{
-  display:none;
-}
-
-
-/* ==================================================
-   RESPONSIVIDADE
-   ================================================== */
-
-@media(max-width:760px){
-
-  .grid{
-    grid-template-columns:1fr;
-  }
-
-  header{
-    align-items:start;
-    flex-direction:column;
-  }
-
-  .wheel-wrap{
-    width:min(360px,82vw);
-  }
-
-  .wheel-label{
-    font-size:10px;
-    width:44%;
-    padding:3px 5px;
-  }
-
-  .wheel-center{
-    width:60px;
-    height:60px;
-  }
-}
-
-@media(max-width:420px){
-
-  .wheel-wrap{
-    width:min(320px,86vw);
-  }
-
-  .wheel-label{
-    font-size:9px;
-  }
-}
