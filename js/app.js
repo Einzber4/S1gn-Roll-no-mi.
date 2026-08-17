@@ -140,7 +140,238 @@ function selectCategory(category) {
   hideResultActions();
   renderCategories();
   renderOptions();
-  renderWheelNames();
+  renderWheelNames();const spinButton = document.querySelector("#spin");
+const wheelElement = document.querySelector("#wheel");
+const resultElement = document.querySelector("#result");
+const resultActionsElement =
+  document.querySelector("#resultActions");
+
+let isSpinning = false;
+let wheelRotation = 0;
+let pendingResult = null;
+
+
+/* ==================================================
+   RESULTADO
+   ================================================== */
+
+function showRollResult(option) {
+  if (!resultElement) return;
+
+  resultElement.innerHTML = "";
+
+  const strong =
+    document.createElement("strong");
+
+  strong.textContent = option;
+
+  resultElement.appendChild(strong);
+}
+
+function hideRollActions() {
+  if (resultActionsElement) {
+    resultActionsElement.classList.add("hidden");
+  }
+}
+
+function showRollActions() {
+  if (resultActionsElement) {
+    resultActionsElement.classList.remove("hidden");
+  }
+}
+
+
+/* ==================================================
+   GIRAR
+   ================================================== */
+
+function spinWheel() {
+  if (
+    !wheelElement ||
+    !spinButton ||
+    isSpinning
+  ) {
+    return;
+  }
+
+  const options =
+    data.categories[selectedCategory] || [];
+
+  if (!options.length) {
+    if (resultElement) {
+      resultElement.innerHTML =
+        '<span class="muted">Nenhuma opção disponível.</span>';
+    }
+
+    return;
+  }
+
+  isSpinning = true;
+  pendingResult = null;
+
+  hideRollActions();
+
+  spinButton.disabled = true;
+
+  /*
+   * Mantém a Roleta visual em 5 setores.
+   * O sorteio utiliza somente as opções
+   * atualmente disponíveis.
+   */
+  const visibleOptions =
+    options.slice(0, 5);
+
+  const selectedIndex =
+    Math.floor(
+      Math.random() *
+      visibleOptions.length
+    );
+
+  const sectorSize = 360 / 5;
+
+  const sectorCenter =
+    selectedIndex * sectorSize +
+    sectorSize / 2;
+
+  /*
+   * O ponteiro permanece no topo.
+   */
+  const targetRotation =
+    360 - sectorCenter;
+
+  const normalizedCurrent =
+    ((wheelRotation % 360) + 360) % 360;
+
+  const correction =
+    (
+      targetRotation -
+      normalizedCurrent +
+      360
+    ) % 360;
+
+  /*
+   * Cinco a sete voltas completas.
+   */
+  const extraTurns =
+    (
+      5 +
+      Math.floor(Math.random() * 3)
+    ) * 360;
+
+  wheelRotation +=
+    extraTurns + correction;
+
+  wheelElement.style.transform =
+    `rotate(${wheelRotation}deg)`;
+
+  const selectedOption =
+    visibleOptions[selectedIndex];
+
+  /*
+   * Aguarda a mesma duração definida
+   * pela transição CSS.
+   */
+  window.setTimeout(() => {
+
+    pendingResult =
+      selectedOption;
+
+    showRollResult(
+      selectedOption
+    );
+
+    showRollActions();
+
+    isSpinning = false;
+
+    spinButton.disabled = false;
+
+  }, 3250);
+}
+
+
+/* ==================================================
+   EVENTO GIRAR
+   ================================================== */
+
+if (spinButton) {
+  spinButton.addEventListener(
+    "click",
+    spinWheel
+  );
+}
+
+
+/* ==================================================
+   AÇÕES DO RESULTADO
+   ================================================== */
+
+const confirmButton =
+  document.querySelector("#confirm");
+
+const rejectButton =
+  document.querySelector("#reject");
+
+const cancelButton =
+  document.querySelector("#cancel");
+
+
+if (confirmButton) {
+
+  confirmButton.addEventListener(
+    "click",
+    () => {
+
+      if (!pendingResult) return;
+
+      showRollResult(
+        pendingResult
+      );
+
+      pendingResult = null;
+
+      hideRollActions();
+    }
+  );
+}
+
+
+if (rejectButton) {
+
+  rejectButton.addEventListener(
+    "click",
+    () => {
+
+      pendingResult = null;
+
+      if (resultElement) {
+        resultElement.innerHTML =
+          '<span class="muted">Resultado rejeitado.</span>';
+      }
+
+      hideRollActions();
+    }
+  );
+}
+
+
+if (cancelButton) {
+
+  cancelButton.addEventListener(
+    "click",
+    () => {
+
+      pendingResult = null;
+
+      if (resultElement) {
+        resultElement.innerHTML =
+          '<span class="muted">Nenhum resultado.</span>';
+      }
+
+      hideRollActions();
+    }
+  );
+}
 }
 
 function renderCategories() {
