@@ -1,6 +1,6 @@
 /* ==================================================
    EINZBERN ROULETTE — V1.0.7
-   app.js — Roll restaurado
+   app.js — Reconstructed
    ================================================== */
 
 const KEY = "einzbern-roulette-v1";
@@ -22,24 +22,26 @@ const defaultData = {
   }
 };
 
-let data =
-  JSON.parse(localStorage.getItem(KEY) || "null") ||
-  defaultData;
+
+/* ==================================================
+   ESTADO
+   ================================================== */
+
+let data;
+
+try {
+  data =
+    JSON.parse(localStorage.getItem(KEY) || "null") ||
+    structuredClone(defaultData);
+} catch {
+  data = structuredClone(defaultData);
+}
 
 let selectedCategory = "Problemas / Dúvidas";
 let lastWheelSignature = "";
 let spinning = false;
 let currentRotation = 0;
 let pendingResult = null;
-
-
-/* ==================================================
-   PERSISTÊNCIA
-   ================================================== */
-
-function save() {
-  localStorage.setItem(KEY, JSON.stringify(data));
-}
 
 
 /* ==================================================
@@ -55,446 +57,83 @@ const confirmButton = document.querySelector("#confirm");
 const rejectButton = document.querySelector("#reject");
 const cancelButton = document.querySelector("#cancel");
 
+const cats = document.querySelector("#cats");
+const list = document.querySelector("#list");
+const title = document.querySelector("#title");
+const count = document.querySelector("#count");
+const progress = document.querySelector("#progress");
+
+const addForm = document.querySelector("#addForm");
+const newItem = document.querySelector("#newItem");
+const resetCycleButton = document.querySelector("#resetCycle");
+
 
 /* ==================================================
-   NOMES DA ROLETA
+   PERSISTÊNCIA
    ================================================== */
 
-function renderWheelNames() {
-  if (!wheel) return;
-
-  const options =
-    data.categories[selectedCategory] || [];
-
-  const visibleOptions = options.slice(0, 5);
-
-  const signature =
-    `${selectedCategory}|${visibleOptions.join("\u001f")}`;
-
-  if (signature === lastWheelSignature) {
-    return;
-  }
-
-  lastWheelSignature = signature;
-
-  wheel
-    .querySelectorAll(".wheel-label")
-    .forEach(label => label.remove());
-
-  const totalSectors = 5;
-  const slice = 360 / totalSectors;
-  const radius = 30;
-
-  const fragment =
-    document.createDocumentFragment();
-
-  visibleOptions.forEach((option, index) => {
-    const angle =
-      index * slice + slice / 2;
-
-    const radians =
-      (angle - 90) * Math.PI / 180;
-
-    const label =
-      document.createElement("div");
-
-    label.className = "wheel-label";
-
-    label.style.position = "absolute";
-    label.style.left =
-      `${50 + Math.cos(radians) * radius}%`;
-
-    label.style.top =
-      `${50 + Math.sin(radians) * radius}%`;
-
-    label.style.transform =
-      "translate(-50%, -50%)";
-
-    label.style.width = "25%";
-    label.style.textAlign = "center";
-
-    const text =
-      document.createElement("span");
-
-    text.textContent = option;
-
-    label.appendChild(text);
-    fragment.appendChild(label);
-  });
-
-  wheel.appendChild(fragment);
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(data));
 }
 
 
 /* ==================================================
-   CATEGORIAS
+   CICLO
    ================================================== */
 
-function selectCategory(category) {
-  if (!data.categories[category]) return;
+function getCycleKey(category) {
+  return `cycle_${category}`;
+}
 
-  selectedCategory = category;
-  lastWheelSignature = "";
+function getCycle(category) {
+  const key = getCycleKey(category);
+  const stored = localStorage.getItem(key);
+
+  if (!stored) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCycle(category, cycle) {
+  localStorage.setItem(
+    getCycleKey(category),
+    JSON.stringify(cycle)
+  );
+}
+
+function resetCycle() {
+  saveCycle(selectedCategory, []);
+
   pendingResult = null;
-
+  clearResult();
   hideResultActions();
-  renderCategories();
-  renderOptions();
-  renderWheelNames();const spinButton = document.querySelector("#spin");
-const wheelElement = document.querySelector("#wheel");
-const resultElement = document.querySelector("#result");
-const resultActionsElement =
-  document.querySelector("#resultActions");
 
-let isSpinning = false;
-let wheelRotation = 0;
-let pendingResult = null;
-
-
-/* ==================================================
-   RESULTADO
-   ================================================== */
-
-function showRollResult(option) {
-  if (!resultElement) return;
-
-  resultElement.innerHTML = "";
-
-  const strong =
-    document.createElement("strong");
-
-  strong.textContent = option;
-
-  resultElement.appendChild(strong);
+  renderProgress();
 }
 
-function hideRollActions() {
-  if (resultActionsElement) {
-    resultActionsElement.classList.add("hidden");
-  }
-}
-
-function showRollActions() {
-  if (resultActionsElement) {
-    resultActionsElement.classList.remove("hidden");
-  }
-}
-
-
-/* ==================================================
-   GIRAR
-   ================================================== */
-
-function spinWheel() {
-  if (
-    !wheelElement ||
-    !spinButton ||
-    isSpinning
-  ) {
-    return;
-  }
+function renderProgress() {
+  if (!progress) return;
 
   const options =
     data.categories[selectedCategory] || [];
 
-  if (!options.length) {
-    if (resultElement) {
-      resultElement.innerHTML =
-        '<span class="muted">Nenhuma opção disponível.</span>';
-    }
-
-    return;
-  }
-
-  isSpinning = true;
-  pendingResult = null;
-
-  hideRollActions();
-
-  spinButton.disabled = true;
-
-  /*
-   * Mantém a Roleta visual em 5 setores.
-   * O sorteio utiliza somente as opções
-   * atualmente disponíveis.
-   */
-  const visibleOptions =
-    options.slice(0, 5);
-
-  const selectedIndex =
-    Math.floor(
-      Math.random() *
-      visibleOptions.length
-    );
-
-  const sectorSize = 360 / 5;
-
-  const sectorCenter =
-    selectedIndex * sectorSize +
-    sectorSize / 2;
-
-  /*
-   * O ponteiro permanece no topo.
-   */
-  const targetRotation =
-    360 - sectorCenter;
-
-  const normalizedCurrent =
-    ((wheelRotation % 360) + 360) % 360;
-
-  const correction =
-    (
-      targetRotation -
-      normalizedCurrent +
-      360
-    ) % 360;
-
-  /*
-   * Cinco a sete voltas completas.
-   */
-  const extraTurns =
-    (
-      5 +
-      Math.floor(Math.random() * 3)
-    ) * 360;
-
-  wheelRotation +=
-    extraTurns + correction;
-
-  wheelElement.style.transform =
-    `rotate(${wheelRotation}deg)`;
-
-  const selectedOption =
-    visibleOptions[selectedIndex];
-
-  /*
-   * Aguarda a mesma duração definida
-   * pela transição CSS.
-   */
-  window.setTimeout(() => {
-
-    pendingResult =
-      selectedOption;
-
-    showRollResult(
-      selectedOption
-    );
-
-    showRollActions();
-
-    isSpinning = false;
-
-    spinButton.disabled = false;
-
-  }, 3250);
-}
-
-
-/* ==================================================
-   EVENTO GIRAR
-   ================================================== */
-
-if (spinButton) {
-  spinButton.addEventListener(
-    "click",
-    spinWheel
-  );
-}
-
-
-/* ==================================================
-   AÇÕES DO RESULTADO
-   ================================================== */
-
-const confirmButton =
-  document.querySelector("#confirm");
-
-const rejectButton =
-  document.querySelector("#reject");
-
-const cancelButton =
-  document.querySelector("#cancel");
-
-
-if (confirmButton) {
-
-  confirmButton.addEventListener(
-    "click",
-    () => {
-
-      if (!pendingResult) return;
-
-      showRollResult(
-        pendingResult
-      );
-
-      pendingResult = null;
-
-      hideRollActions();
-    }
-  );
-}
-
-
-if (rejectButton) {
-
-  rejectButton.addEventListener(
-    "click",
-    () => {
-
-      pendingResult = null;
-
-      if (resultElement) {
-        resultElement.innerHTML =
-          '<span class="muted">Resultado rejeitado.</span>';
-      }
-
-      hideRollActions();
-    }
-  );
-}
-
-
-if (cancelButton) {
-
-  cancelButton.addEventListener(
-    "click",
-    () => {
-
-      pendingResult = null;
-
-      if (resultElement) {
-        resultElement.innerHTML =
-          '<span class="muted">Nenhum resultado.</span>';
-      }
-
-      hideRollActions();
-    }
-  );
-}
-}
-
-function renderCategories() {
-  const container =
-    document.querySelector("#cats");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  Object.keys(data.categories).forEach(category => {
-    const button =
-      document.createElement("button");
-
-    button.className =
-      "cat" +
-      (
-        category === selectedCategory
-          ? " active"
-          : ""
-      );
-
-    button.textContent = category;
-
-    button.addEventListener(
-      "click",
-      () => selectCategory(category)
-    );
-
-    container.appendChild(button);
-  });
-}
-
-
-/* ==================================================
-   LISTA DE OPÇÕES
-   ================================================== */
-
-function renderOptions() {
-  const list =
-    document.querySelector("#list");
-
-  if (!list) return;
-
-  list.innerHTML = "";
-
-  const options =
-    data.categories[selectedCategory] || [];
-
-  options.forEach(option => {
-    const item =
-      document.createElement("div");
-
-    item.className = "item";
-
-    const name =
-      document.createElement("span");
-
-    name.textContent = option;
-
-    item.appendChild(name);
-    list.appendChild(item);
-  });
-
-  const count =
-    document.querySelector("#count");
-
-  if (count) {
-    count.textContent =
-      `${options.length} disponíveis`;
-  }
-
-  const title =
-    document.querySelector("#title");
-
-  if (title) {
-    title.textContent =
-      selectedCategory;
-  }
-}
-
-
-/* ==================================================
-   ADICIONAR OPÇÃO
-   ================================================== */
-
-const addForm =
-  document.querySelector("#addForm");
-
-if (addForm) {
-  addForm.addEventListener(
-    "submit",
-    event => {
-      event.preventDefault();
-
-      const input =
-        document.querySelector("#newItem");
-
-      if (!input) return;
-
-      const value =
-        input.value.trim();
-
-      if (!value) return;
-
-      const options =
-        data.categories[selectedCategory];
-
-      if (options.includes(value)) {
-        return;
-      }
-
-      options.push(value);
-
-      lastWheelSignature = "";
-      input.value = "";
-
-      save();
-
-      renderOptions();
-      renderWheelNames();
-    }
-  );
+  const cycle =
+    getCycle(selectedCategory);
+
+  const used =
+    cycle.filter(option =>
+      options.includes(option)
+    ).length;
+
+  progress.textContent =
+    `${used}/${options.length} utilizadas`;
 }
 
 
@@ -536,29 +175,272 @@ function hideResultActions() {
 
 
 /* ==================================================
-   ROLL
+   NOMES DA ROLETA
+   ================================================== */
+
+function renderWheelNames() {
+  if (!wheel) return;
+
+  const options =
+    data.categories[selectedCategory] || [];
+
+  const visibleOptions =
+    options.slice(0, 5);
+
+  const signature =
+    `${selectedCategory}|${visibleOptions.join("\u001f")}`;
+
+  if (signature === lastWheelSignature) {
+    return;
+  }
+
+  lastWheelSignature = signature;
+
+  wheel
+    .querySelectorAll(".wheel-label")
+    .forEach(label => label.remove());
+
+  const totalSectors = 5;
+  const slice = 360 / totalSectors;
+  const radius = 30;
+
+  const fragment =
+    document.createDocumentFragment();
+
+  visibleOptions.forEach((option, index) => {
+    const angle =
+      index * slice + slice / 2;
+
+    const radians =
+      (angle - 90) * Math.PI / 180;
+
+    const label =
+      document.createElement("div");
+
+    label.className = "wheel-label";
+
+    label.style.position = "absolute";
+
+    label.style.left =
+      `${50 + Math.cos(radians) * radius}%`;
+
+    label.style.top =
+      `${50 + Math.sin(radians) * radius}%`;
+
+    label.style.transform =
+      "translate(-50%, -50%)";
+
+    label.style.width = "25%";
+    label.style.textAlign = "center";
+
+    const text =
+      document.createElement("span");
+
+    text.textContent = option;
+
+    label.appendChild(text);
+    fragment.appendChild(label);
+  });
+
+  wheel.appendChild(fragment);
+}
+
+
+/* ==================================================
+   CATEGORIAS
+   ================================================== */
+
+function selectCategory(category) {
+  if (!data.categories[category]) return;
+  if (spinning) return;
+
+  selectedCategory = category;
+
+  lastWheelSignature = "";
+  pendingResult = null;
+
+  hideResultActions();
+  clearResult();
+
+  renderCategories();
+  renderOptions();
+  renderWheelNames();
+  renderProgress();
+}
+
+function renderCategories() {
+  if (!cats) return;
+
+  cats.innerHTML = "";
+
+  Object.keys(data.categories).forEach(category => {
+    const button =
+      document.createElement("button");
+
+    button.className =
+      "cat" +
+      (
+        category === selectedCategory
+          ? " active"
+          : ""
+      );
+
+    button.textContent = category;
+
+    button.addEventListener(
+      "click",
+      () => selectCategory(category)
+    );
+
+    cats.appendChild(button);
+  });
+}
+
+
+/* ==================================================
+   LISTA DE OPÇÕES
+   ================================================== */
+
+function renderOptions() {
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  const options =
+    data.categories[selectedCategory] || [];
+
+  options.forEach(option => {
+    const item =
+      document.createElement("div");
+
+    item.className = "item";
+
+    const name =
+      document.createElement("span");
+
+    name.textContent = option;
+
+    item.appendChild(name);
+    list.appendChild(item);
+  });
+
+  if (count) {
+    count.textContent =
+      `${options.length} disponíveis`;
+  }
+
+  if (title) {
+    title.textContent =
+      selectedCategory;
+  }
+}
+
+
+/* ==================================================
+   ADICIONAR OPÇÃO
+   ================================================== */
+
+if (addForm) {
+  addForm.addEventListener(
+    "submit",
+    event => {
+      event.preventDefault();
+
+      if (!newItem) return;
+
+      const value =
+        newItem.value.trim();
+
+      if (!value) return;
+
+      const options =
+        data.categories[selectedCategory];
+
+      if (!options) return;
+
+      if (options.includes(value)) {
+        return;
+      }
+
+      options.push(value);
+
+      lastWheelSignature = "";
+      newItem.value = "";
+
+      save();
+
+      renderOptions();
+      renderWheelNames();
+      renderProgress();
+    }
+  );
+}
+
+
+/* ==================================================
+   NOVO CICLO
+   ================================================== */
+
+if (resetCycleButton) {
+  resetCycleButton.addEventListener(
+    "click",
+    resetCycle
+  );
+}
+
+
+/* ==================================================
+   GIRAR
    ================================================== */
 
 function spinWheel() {
-  if (!wheel || !spinButton || spinning) {
+  if (
+    !wheel ||
+    !spinButton ||
+    spinning
+  ) {
     return;
   }
 
   const options =
     data.categories[selectedCategory] || [];
 
-  /*
-   * A Roleta visual possui cinco setores.
-   * Apenas as opções existentes participam do Roll.
-   */
-  const visibleOptions =
-    options.slice(0, 5);
+  const cycle =
+    getCycle(selectedCategory);
 
-  if (visibleOptions.length === 0) {
+  const unusedOptions =
+    options.filter(
+      option => !cycle.includes(option)
+    );
+
+  if (options.length === 0) {
     showResult(
       "Adicione pelo menos uma opção."
     );
 
+    return;
+  }
+
+  /*
+   * Quando todas as opções já foram utilizadas,
+   * inicia-se um novo ciclo automaticamente.
+   */
+  const availableOptions =
+    unusedOptions.length > 0
+      ? unusedOptions
+      : options;
+
+  if (unusedOptions.length === 0) {
+    saveCycle(selectedCategory, []);
+  }
+
+  /*
+   * A roleta visual possui cinco setores.
+   */
+  const visibleOptions =
+    availableOptions.slice(0, 5);
+
+  if (visibleOptions.length === 0) {
     return;
   }
 
@@ -571,7 +453,163 @@ function spinWheel() {
 
   const selectedIndex =
     Math.floor(
-      Math.random() * visibleOptions.length
+      Math.random() *
+      visibleOptions.length
     );
 
-  const slice = 
+  const sectorSize =
+    360 / 5;
+
+  const sectorCenter =
+    selectedIndex * sectorSize +
+    sectorSize / 2;
+
+  /*
+   * O ponteiro permanece no topo.
+   */
+  const targetRotation =
+    360 - sectorCenter;
+
+  const normalizedCurrent =
+    (
+      currentRotation % 360 +
+      360
+    ) % 360;
+
+  const correction =
+    (
+      targetRotation -
+      normalizedCurrent +
+      360
+    ) % 360;
+
+  /*
+   * Cinco a sete voltas completas.
+   */
+  const extraTurns =
+    (
+      5 +
+      Math.floor(Math.random() * 3)
+    ) * 360;
+
+  currentRotation +=
+    extraTurns + correction;
+
+  wheel.style.transform =
+    `rotate(${currentRotation}deg)`;
+
+  const selectedOption =
+    visibleOptions[selectedIndex];
+
+  /*
+   * Duração compatível com a transição
+   * original da roleta.
+   */
+  window.setTimeout(() => {
+    pendingResult = selectedOption;
+
+    showResult(selectedOption);
+    showResultActions();
+
+    spinning = false;
+    spinButton.disabled = false;
+  }, 3250);
+}
+
+
+/* ==================================================
+   EVENTO GIRAR
+   ================================================== */
+
+if (spinButton) {
+  spinButton.addEventListener(
+    "click",
+    spinWheel
+  );
+}
+
+
+/* ==================================================
+   CONFIRMAR
+   ================================================== */
+
+if (confirmButton) {
+  confirmButton.addEventListener(
+    "click",
+    () => {
+      if (!pendingResult) return;
+
+      const cycle =
+        getCycle(selectedCategory);
+
+      if (!cycle.includes(pendingResult)) {
+        cycle.push(pendingResult);
+        saveCycle(
+          selectedCategory,
+          cycle
+        );
+      }
+
+      showResult(pendingResult);
+
+      pendingResult = null;
+
+      hideResultActions();
+      renderProgress();
+    }
+  );
+}
+
+
+/* ==================================================
+   REJEITAR
+   ================================================== */
+
+if (rejectButton) {
+  rejectButton.addEventListener(
+    "click",
+    () => {
+      pendingResult = null;
+
+      if (result) {
+        result.innerHTML =
+          '<span class="muted">Resultado rejeitado.</span>';
+      }
+
+      hideResultActions();
+    }
+  );
+}
+
+
+/* ==================================================
+   CANCELAR
+   ================================================== */
+
+if (cancelButton) {
+  cancelButton.addEventListener(
+    "click",
+    () => {
+      pendingResult = null;
+
+      clearResult();
+      hideResultActions();
+    }
+  );
+}
+
+
+/* ==================================================
+   INICIALIZAÇÃO
+   ================================================== */
+
+function init() {
+  renderCategories();
+  renderOptions();
+  renderWheelNames();
+  renderProgress();
+  clearResult();
+  hideResultActions();
+}
+
+init();
