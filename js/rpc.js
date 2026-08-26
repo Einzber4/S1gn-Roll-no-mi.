@@ -1,4 +1,4 @@
-"use strict";
+  "use strict";
 
 const http = require("http");
 const fs = require("fs");
@@ -8,7 +8,7 @@ const RPC = require("discord-rpc");
 const HOST = "127.0.0.1";
 const PORT = 6464;
 
-const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID?.trim();
 
 const ALLOWED_ORIGIN = "http://127.0.0.1:5500";
 const MAX_BODY_SIZE = 16 * 1024;
@@ -251,9 +251,6 @@ async function setPresence(details, state) {
     largeImageKey: "s1gn-tool-no-mi",
     largeImageText: "S1gn-Tool-No-Mi.",
 
-    smallImageKey: "einzbern",
-    smallImageText: "Einzbern",
-
     instance: false
   });
 }
@@ -431,8 +428,11 @@ server.listen(PORT, HOST, async () => {
 
   try {
     await connectRPC();
-  } catch {
-    console.warn("[RPC] Discord IPC unavailable.");
+  } catch (error) {
+    console.warn(
+      "[RPC] Discord IPC unavailable:",
+      error.message
+    );
   }
 });
 
