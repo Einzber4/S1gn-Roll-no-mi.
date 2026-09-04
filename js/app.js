@@ -45,6 +45,50 @@ let pendingResult = null;
 
 
 /* ==================================================
+   DISCORD RICH PRESENCE
+   ================================================== */
+
+async function updateRichPresence(details) {
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:6464/presence",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          details,
+          state: "Working on a Project."
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      console.error(
+        "[RPC] Falha ao atualizar:",
+        result
+      );
+
+      return;
+    }
+
+    console.log(
+      "[RPC] Activity atualizada:",
+      details
+    );
+  } catch (error) {
+    console.error(
+      "[RPC] Bridge indisponível:",
+      error
+    );
+  }
+}
+
+
+/* ==================================================
    ELEMENTOS
    ================================================== */
 
@@ -110,6 +154,8 @@ function saveCycle(category, cycle) {
 
 function resetCycle() {
   saveCycle(selectedCategory, []);
+
+  void updateRichPresence("Resetting The Cycle.");
 
   pendingResult = null;
   clearResult();
@@ -256,6 +302,8 @@ function selectCategory(category) {
 
   selectedCategory = category;
 
+  void updateRichPresence("Creating The S1gn.");
+
   lastWheelSignature = "";
   pendingResult = null;
 
@@ -364,6 +412,8 @@ if (addForm) {
 
       options.push(value);
 
+      void updateRichPresence("Creating The S1gn.");
+
       lastWheelSignature = "";
       newItem.value = "";
 
@@ -447,6 +497,8 @@ function spinWheel() {
   spinning = true;
   pendingResult = null;
 
+  void updateRichPresence("Spinning The Roulette.");
+
   hideResultActions();
 
   spinButton.disabled = true;
@@ -508,6 +560,8 @@ function spinWheel() {
   window.setTimeout(() => {
     pendingResult = selectedOption;
 
+    void updateRichPresence("Reviewing The Result.");
+
     showResult(selectedOption);
     showResultActions();
 
@@ -550,6 +604,8 @@ if (confirmButton) {
         );
       }
 
+      void updateRichPresence("Decision Confirmed.");
+
       showResult(pendingResult);
 
       pendingResult = null;
@@ -570,6 +626,8 @@ if (rejectButton) {
     "click",
     () => {
       pendingResult = null;
+
+      void updateRichPresence("Reconsidering The Result.");
 
       if (result) {
         result.innerHTML =
@@ -592,6 +650,8 @@ if (cancelButton) {
     () => {
       pendingResult = null;
 
+      void updateRichPresence("Creating The S1gn.");
+
       clearResult();
       hideResultActions();
     }
@@ -604,6 +664,8 @@ if (cancelButton) {
    ================================================== */
 
 function init() {
+  void updateRichPresence("Creating The S1gn.");
+
   renderCategories();
   renderOptions();
   renderWheelNames();
