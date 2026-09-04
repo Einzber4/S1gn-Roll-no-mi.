@@ -13,7 +13,7 @@ Decision engine — projetos primeiro, distrações logo mais.
 ## Execução local
 
 Abra `index.html` em um navegador ou utilize o Live Server no Visual Studio Code.
-Funcional em Dispositivos Móveis.
+ Funcional em Dispositivos Móveis.
 
 ## Categorias
 
