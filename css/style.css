@@ -39,12 +39,12 @@
   --background-image:
     url("https://i.pinimg.com/736x/ea/e7/23/eae72342cb9a589c74e578dfc1d6efa7.jpg");
 
-  --background-brightness: .58;
-  --background-saturation: .92;
+  --background-brightness: .72;
+  --background-saturation: .1;
 
-  --background-overlay-top: rgba(0, 0, 0, .48);
-  --background-overlay-mid: rgba(0, 0, 0, .30);
-  --background-overlay-bottom: rgba(0, 0, 0, .62);
+  --background-overlay-top: rgba(0, 0, 0, .32);
+  --background-overlay-mid: rgba(0, 0, 0, .18);
+  --background-overlay-bottom: rgba(0, 0, 0, .48);
 
   /* Transições */
   --transition-fast: 180ms ease;
