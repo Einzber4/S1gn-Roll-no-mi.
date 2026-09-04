@@ -49,40 +49,16 @@
       <div class="visual-section">
 
         <div>
-          <div class="small muted">Theme</div>
+          <div class="small muted">Tema</div>
           <strong>Aparência</strong>
         </div>
 
         <div class="visual-options">
-
-          <button
-            type="button"
-            class="visual-option"
-            data-theme-option="midnight"
-          >
-            Midnight
-          </button>
-
-          <button
-            type="button"
-            class="visual-option"
-            data-theme-option="dark"
-          >
-            Dark
-          </button>
-
-          <button
-            type="button"
-            class="visual-option"
-            data-theme-option="light"
-          >
-            Light
-          </button>
-
+          <button type="button" class="visual-option" data-theme-option="midnight">Midnight</button>
+          <button type="button" class="visual-option" data-theme-option="dark">Dark</button>
+          <button type="button" class="visual-option" data-theme-option="light">Light</button>
         </div>
-
       </div>
-
 
       <div class="visual-section">
 
@@ -92,31 +68,24 @@
         </div>
 
         <div class="visual-options">
+          <button type="button" class="visual-option" data-sharpness-option="soft">Soft</button>
+          <button type="button" class="visual-option" data-sharpness-option="balanced">Balanced</button>
+          <button type="button" class="visual-option" data-sharpness-option="crisp">Crisp</button>
+        </div>
 
-          <button
-            type="button"
-            class="visual-option"
-            data-sharpness-option="soft"
-          >
-            Soft
-          </button>
+      </div>
 
-          <button
-            type="button"
-            class="visual-option"
-            data-sharpness-option="balanced"
-          >
-            Balanced
-          </button>
+      <div class="visual-section">
 
-          <button
-            type="button"
-            class="visual-option"
-            data-sharpness-option="crisp"
-          >
-            Crisp
-          </button>
+        <div>
+          <div class="small muted">Animação</div>
+          <strong>Atmosfera</strong>
+        </div>
 
+        <div class="visual-options">
+          <button type="button" class="visual-option" data-animation-option="static">Static</button>
+          <button type="button" class="visual-option" data-animation-option="ambient">Ambient</button>
+          <button type="button" class="visual-option" data-animation-option="cinematic">Cinematic</button>
         </div>
 
       </div>
@@ -234,117 +203,77 @@
   <!-- Sistema visual independente do app.js -->
   <script>
     (() => {
-
       const THEME_KEY = "einzbern-roulette-theme";
       const SHARPNESS_KEY = "einzbern-roulette-sharpness";
+      const ANIMATION_KEY = "einzbern-roulette-animation";
 
       const root = document.documentElement;
-
       const tabs = document.querySelectorAll(".visual-tab");
       const roulettePanel = document.getElementById("roulettePanel");
       const visualPanel = document.getElementById("visualPanel");
-
-      const themeOptions =
-        document.querySelectorAll("[data-theme-option]");
-
-      const sharpnessOptions =
-        document.querySelectorAll("[data-sharpness-option]");
-
+      const themeOptions = document.querySelectorAll("[data-theme-option]");
+      const sharpnessOptions = document.querySelectorAll("[data-sharpness-option]");
+      const animationOptions = document.querySelectorAll("[data-animation-option]");
 
       function applyTheme(theme) {
-        const validThemes = ["midnight", "dark", "light"];
-
-        if (!validThemes.includes(theme)) {
-          theme = "midnight";
-        }
-
+        const valid = ["midnight", "dark", "light"];
+        if (!valid.includes(theme)) theme = "midnight";
         root.dataset.theme = theme;
         localStorage.setItem(THEME_KEY, theme);
-
         themeOptions.forEach(button => {
-          button.classList.toggle(
-            "active",
-            button.dataset.themeOption === theme
-          );
+          button.classList.toggle("active", button.dataset.themeOption === theme);
         });
       }
-
 
       function applySharpness(sharpness) {
-        const validSharpness = ["soft", "balanced", "crisp"];
-
-        if (!validSharpness.includes(sharpness)) {
-          sharpness = "balanced";
-        }
-
+        const valid = ["soft", "balanced", "crisp"];
+        if (!valid.includes(sharpness)) sharpness = "balanced";
         root.dataset.sharpness = sharpness;
         localStorage.setItem(SHARPNESS_KEY, sharpness);
-
         sharpnessOptions.forEach(button => {
-          button.classList.toggle(
-            "active",
-            button.dataset.sharpnessOption === sharpness
-          );
+          button.classList.toggle("active", button.dataset.sharpnessOption === sharpness);
         });
       }
 
+      function applyAnimation(animation) {
+        const valid = ["static", "ambient", "cinematic"];
+        if (!valid.includes(animation)) animation = "ambient";
+        root.dataset.animation = animation;
+        localStorage.setItem(ANIMATION_KEY, animation);
+        animationOptions.forEach(button => {
+          button.classList.toggle("active", button.dataset.animationOption === animation);
+        });
+      }
 
       tabs.forEach(tab => {
-
         tab.addEventListener("click", () => {
-
-          const target = tab.dataset.tab;
-
-          tabs.forEach(item => {
-            item.classList.toggle(
-              "active",
-              item === tab
-            );
-          });
-
-          const visualActive = target === "visual";
-
-          roulettePanel.classList.toggle(
-            "hidden",
-            visualActive
-          );
-
-          visualPanel.classList.toggle(
-            "hidden",
-            !visualActive
-          );
-
+          const visualActive = tab.dataset.tab === "visual";
+          tabs.forEach(item => item.classList.toggle("active", item === tab));
+          roulettePanel.classList.toggle("hidden", visualActive);
+          visualPanel.classList.toggle("hidden", !visualActive);
+          if (visualActive) {
+            visualPanel.classList.remove("visual-panel-enter");
+            void visualPanel.offsetWidth;
+            visualPanel.classList.add("visual-panel-enter");
+          }
         });
-
       });
-
-
-      themeOptions.forEach(button => {
-
-        button.addEventListener("click", () => {
-          applyTheme(button.dataset.themeOption);
-        });
-
-      });
-
 
       sharpnessOptions.forEach(button => {
-
-        button.addEventListener("click", () => {
-          applySharpness(button.dataset.sharpnessOption);
-        });
-
+        button.addEventListener("click", () => applySharpness(button.dataset.sharpnessOption));
       });
 
+      animationOptions.forEach(button => {
+        button.addEventListener("click", () => applyAnimation(button.dataset.animationOption));
+      });
 
-      applyTheme(
-        localStorage.getItem(THEME_KEY) || "midnight"
-      );
+      themeOptions.forEach(button => {
+        button.addEventListener("click", () => applyTheme(button.dataset.themeOption));
+      });
 
-      applySharpness(
-        localStorage.getItem(SHARPNESS_KEY) || "balanced"
-      );
-
+      applyTheme(localStorage.getItem(THEME_KEY) || "midnight");
+      applySharpness(localStorage.getItem(SHARPNESS_KEY) || "balanced");
+      applyAnimation(localStorage.getItem(ANIMATION_KEY) || "ambient");
     })();
   </script>
 
