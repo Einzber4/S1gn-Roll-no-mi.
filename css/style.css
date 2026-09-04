@@ -1,35 +1,161 @@
 /* ==================================================
-   EINZBERN ROULETTE — V1.0.6
-   CSS — Cinzel Typography Revision
+   EINZBERN ROULETTE — V1.1.0
+   CSS — Visual Polish / Theme System
+   ================================================== */
+
+
+/* ==================================================
+   BASE
    ================================================== */
 
 :root{
   color-scheme:dark;
+
   --bg:#090b10;
   --panel:#11151d;
   --line:#252c38;
   --text:#eef2f7;
   --muted:#929baa;
   --accent:#8ea8ff;
+
+  --button-bg:#171c25;
+  --input-bg:#0b0e14;
+  --item-bg:#0c1016;
+  --primary-bg:#27365f;
+
+  --ui-radius:11px;
+  --ui-shadow:0 14px 50px #0005;
+  --ui-transition:160ms ease;
 }
+
+
+/* ==================================================
+   THEMES
+   ================================================== */
+
+/* ---------- Midnight ---------- */
+
+:root[data-theme="midnight"]{
+  color-scheme:dark;
+
+  --bg:#090b10;
+  --panel:#11151d;
+  --line:#252c38;
+  --text:#eef2f7;
+  --muted:#929baa;
+  --accent:#8ea8ff;
+
+  --button-bg:#171c25;
+  --input-bg:#0b0e14;
+  --item-bg:#0c1016;
+  --primary-bg:#27365f;
+}
+
+
+/* ---------- Dark ---------- */
+
+:root[data-theme="dark"]{
+  color-scheme:dark;
+
+  --bg:#050507;
+  --panel:#0c0d11;
+  --line:#1b1d24;
+  --text:#f3f3f5;
+  --muted:#858891;
+  --accent:#a6a6ff;
+
+  --button-bg:#121318;
+  --input-bg:#08090c;
+  --item-bg:#0a0b0f;
+  --primary-bg:#29294a;
+}
+
+
+/* ---------- Light ---------- */
+
+:root[data-theme="light"]{
+  color-scheme:light;
+
+  --bg:#eef0f4;
+  --panel:#ffffff;
+  --line:#d5d9e1;
+  --text:#181b22;
+  --muted:#69707c;
+  --accent:#536da8;
+
+  --button-bg:#f4f5f7;
+  --input-bg:#ffffff;
+  --item-bg:#f7f8fa;
+  --primary-bg:#dce4f7;
+}
+
+
+/* ==================================================
+   NITIDEZ
+   ================================================== */
+
+/* Soft */
+
+:root[data-sharpness="soft"]{
+  --ui-radius:14px;
+  --ui-shadow:0 14px 50px #0004;
+  --ui-transition:220ms ease;
+}
+
+
+/* Balanced */
+
+:root[data-sharpness="balanced"]{
+  --ui-radius:11px;
+  --ui-shadow:0 14px 50px #0005;
+  --ui-transition:160ms ease;
+}
+
+
+/* Crisp */
+
+:root[data-sharpness="crisp"]{
+  --ui-radius:8px;
+  --ui-shadow:0 10px 30px #0006;
+  --ui-transition:100ms ease;
+}
+
+
+/* ==================================================
+   GLOBAL
+   ================================================== */
 
 *{
   box-sizing:border-box;
 }
 
+
 body{
   margin:0;
+
   background:
     radial-gradient(
       circle at 50% 0,
-      #171d2a 0,
-      #090b10 45%
+      color-mix(
+        in srgb,
+        var(--accent) 11%,
+        var(--bg)
+      ),
+      var(--bg) 48%
     );
+
   color:var(--text);
+
   font-family:"Cinzel",serif;
   font-size:15px;
+
   min-height:100vh;
+
+  transition:
+    background var(--ui-transition),
+    color var(--ui-transition);
 }
+
 
 main{
   width:min(1050px,94vw);
@@ -37,143 +163,285 @@ main{
   padding:36px 0 60px;
 }
 
+
+/* ==================================================
+   HEADER
+   ================================================== */
+
 header{
   display:flex;
   justify-content:space-between;
+
   gap:20px;
   align-items:end;
+
   margin-bottom:24px;
 }
 
+
 h1{
   margin:0;
+
   font-size:30px;
   letter-spacing:.08em;
 }
 
+
 h2{
   margin:0 0 14px;
 }
+
 
 .sub{
   color:var(--muted);
   margin:6px 0 0;
 }
 
+
+.header-controls{
+  display:flex;
+  flex-direction:column;
+
+  align-items:flex-end;
+
+  gap:10px;
+}
+
+
+/* ==================================================
+   GRID
+   ================================================== */
+
 .grid{
   display:grid;
+
   grid-template-columns:300px 1fr;
+
   gap:18px;
 }
 
+
+/* ==================================================
+   PANELS
+   ================================================== */
+
 .panel{
-  background:#0f131aee;
+  background:
+    color-mix(
+      in srgb,
+      var(--panel) 94%,
+      transparent
+    );
+
   border:1px solid var(--line);
+
   border-radius:18px;
+
   padding:18px;
-  box-shadow:0 14px 50px #0005;
+
+  box-shadow:var(--ui-shadow);
+
+  transition:
+    background var(--ui-transition),
+    border-color var(--ui-transition),
+    box-shadow var(--ui-transition);
 }
+
+
+/* ==================================================
+   BUTTONS / INPUTS
+   ================================================== */
 
 button,
 input{
   font:inherit;
 }
 
+
 button{
   border:1px solid var(--line);
-  background:#171c25;
+
+  background:var(--button-bg);
   color:var(--text);
-  border-radius:11px;
+
+  border-radius:var(--ui-radius);
+
   padding:10px 13px;
+
   cursor:pointer;
+
+  transition:
+    background var(--ui-transition),
+    border-color var(--ui-transition),
+    color var(--ui-transition),
+    transform var(--ui-transition);
 }
+
 
 button:hover{
-  border-color:#56637a;
+  border-color:var(--accent);
 }
 
+
+button:active{
+  transform:translateY(1px);
+}
+
+
 button.primary{
-  background:#27365f;
-  border-color:#536aa8;
+  background:var(--primary-bg);
+
+  border-color:var(--accent);
+
   font-weight:700;
 }
+
 
 button.danger{
   color:#ffb3b3;
 }
+
+
+input{
+  width:100%;
+
+  background:var(--input-bg);
+
+  border:1px solid var(--line);
+
+  color:var(--text);
+
+  border-radius:10px;
+
+  padding:10px;
+
+  transition:
+    background var(--ui-transition),
+    border-color var(--ui-transition),
+    box-shadow var(--ui-transition);
+}
+
+
+input:focus{
+  outline:none;
+
+  border-color:var(--accent);
+
+  box-shadow:
+    0 0 0 2px
+    color-mix(
+      in srgb,
+      var(--accent) 18%,
+      transparent
+    );
+}
+
+
+form{
+  display:flex;
+
+  gap:8px;
+
+  margin:14px 0;
+}
+
+
+/* ==================================================
+   CATEGORIAS
+   ================================================== */
 
 .cats{
   display:grid;
   gap:8px;
 }
 
+
 .cat{
   text-align:left;
 }
 
+
 .cat.active{
   border-color:var(--accent);
-  box-shadow:inset 3px 0 var(--accent);
+
+  box-shadow:
+    inset 3px 0 var(--accent);
 }
+
+
+/* ==================================================
+   UTILITÁRIOS
+   ================================================== */
 
 .row{
   display:flex;
+
   gap:8px;
+
   align-items:center;
 }
+
 
 .between{
   justify-content:space-between;
 }
 
+
 .muted{
   color:var(--muted);
 }
+
 
 .small{
   font-size:12px;
 }
 
-input{
-  width:100%;
-  background:#0b0e14;
-  border:1px solid var(--line);
-  color:var(--text);
-  border-radius:10px;
-  padding:10px;
+
+.hidden{
+  display:none !important;
 }
 
-form{
-  display:flex;
-  gap:8px;
-  margin:14px 0;
-}
+
+/* ==================================================
+   LISTA
+   ================================================== */
 
 .list{
   display:grid;
+
   gap:8px;
+
   max-height:310px;
+
   overflow:auto;
 }
 
+
 .item{
   display:flex;
+
   align-items:center;
   justify-content:space-between;
+
   gap:10px;
+
   padding:10px 12px;
+
   border:1px solid var(--line);
+
   border-radius:11px;
-  background:#0c1016;
+
+  background:var(--item-bg);
+
+  transition:
+    background var(--ui-transition),
+    border-color var(--ui-transition);
 }
+
 
 .item.done{
   opacity:.45;
   text-decoration:line-through;
-}
-
-.center{
-  text-align:center;
 }
 
 
@@ -181,19 +449,30 @@ form{
    ROLETA
    ================================================== */
 
+.center{
+  text-align:center;
+}
+
+
 .wheel-wrap{
   position:relative;
+
   width:min(440px,80vw);
+
   aspect-ratio:1;
+
   margin:15px auto;
 }
 
+
 .wheel{
   position:relative;
+
   width:100%;
   height:100%;
 
   border-radius:50%;
+
   border:8px solid #222a36;
 
   /*
@@ -201,6 +480,7 @@ form{
    * mais clara e contrastada, mantendo
    * a identidade escura da interface.
    */
+
   background:
     conic-gradient(
       #8ea8ff 0deg 72deg,
@@ -221,7 +501,9 @@ form{
 }
 
 
-/* Nomes das alternativas */
+/* ==================================================
+   NOMES DAS ALTERNATIVAS
+   ================================================== */
 
 .wheel-label{
   position:absolute;
@@ -230,9 +512,11 @@ form{
   top:50%;
 
   width:42%;
+
   min-height:30px;
 
   display:flex;
+
   align-items:center;
   justify-content:center;
 
@@ -241,10 +525,12 @@ form{
   color:#ffffff;
 
   font-family:"Cinzel",serif;
+
   font-size:12px;
   font-weight:700;
 
   line-height:1.15;
+
   text-align:center;
 
   text-shadow:
@@ -256,19 +542,25 @@ form{
   transform-origin:0 0;
 }
 
+
 .wheel-label span{
   display:block;
+
   max-width:100%;
 
   overflow:hidden;
+
   text-overflow:ellipsis;
 
   white-space:normal;
+
   overflow-wrap:anywhere;
 }
 
 
-/* Centro da Roleta */
+/* ==================================================
+   CENTRO DA ROLETA
+   ================================================== */
 
 .wheel-center{
   position:absolute;
@@ -283,7 +575,7 @@ form{
 
   border-radius:50%;
 
-  background:#11151d;
+  background:var(--panel);
 
   border:2px solid #7183a8;
 
@@ -292,6 +584,7 @@ form{
     0 8px 25px #0008;
 
   display:grid;
+
   place-items:center;
 
   z-index:3;
@@ -299,8 +592,10 @@ form{
   pointer-events:none;
 }
 
+
 .wheel-center span{
   font-size:10px;
+
   font-weight:800;
 
   letter-spacing:.12em;
@@ -309,7 +604,9 @@ form{
 }
 
 
-/* Ponteiro */
+/* ==================================================
+   PONTEIRO
+   ================================================== */
 
 .pointer{
   position:absolute;
@@ -324,6 +621,7 @@ form{
 
   border-left:13px solid transparent;
   border-right:13px solid transparent;
+
   border-top:25px solid #ffffff;
 
   z-index:5;
@@ -333,27 +631,145 @@ form{
 }
 
 
-/* Resultado */
+/* ==================================================
+   RESULTADO
+   ================================================== */
 
 .result{
   min-height:72px;
 
   display:grid;
+
   place-items:center;
 
-  border:1px dashed #394354;
+  border:1px dashed var(--line);
+
   border-radius:14px;
 
   margin:16px 0;
+
   padding:12px;
+
+  transition:
+    border-color var(--ui-transition),
+    background var(--ui-transition);
 }
+
 
 .result strong{
   font-size:21px;
 }
 
+
+/* ==================================================
+   AÇÕES
+   ================================================== */
+
 .actions{
   display:flex;
+
   flex-wrap:wrap;
+
   justify-content:center;
+
   gap:8px;
+}
+
+
+/* ==================================================
+   SISTEMA DE ABAS
+   ================================================== */
+
+.visual-tabs{
+  display:flex;
+
+  gap:4px;
+
+  padding:4px;
+
+  background:var(--panel);
+
+  border:1px solid var(--line);
+
+  border-radius:12px;
+}
+
+
+.visual-tab{
+  border:0;
+
+  background:transparent;
+
+  padding:7px 12px;
+
+  color:var(--muted);
+
+  border-radius:8px;
+
+  font-size:12px;
+}
+
+
+.visual-tab:hover{
+  color:var(--text);
+
+  border-color:transparent;
+}
+
+
+.visual-tab.active{
+  background:var(--button-bg);
+
+  color:var(--text);
+
+  border-color:var(--line);
+
+  box-shadow:
+    0 2px 8px #0003;
+}
+
+
+/* ==================================================
+   PAINEL VISUAL
+   ================================================== */
+
+.visual-panel{
+  margin-bottom:18px;
+
+  display:grid;
+
+  gap:12px;
+
+  padding:14px;
+
+  background:var(--panel);
+
+  border:1px solid var(--line);
+
+  border-radius:16px;
+
+  box-shadow:var(--ui-shadow);
+
+  transition:
+    background var(--ui-transition),
+    border-color var(--ui-transition),
+    box-shadow var(--ui-transition);
+}
+
+
+.visual-section{
+  display:flex;
+
+  align-items:center;
+  justify-content:space-between;
+
+  gap:18px;
+}
+
+
+.visual-options{
+  display:flex;
+
+  flex-wrap:wrap;
+
+ 
