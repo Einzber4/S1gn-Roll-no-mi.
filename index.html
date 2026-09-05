@@ -8,17 +8,48 @@
 </head>
 
 <body>
+
+  <!-- ==================================================
+       ANIMATED THEME
+       ================================================== -->
+
+  <video
+    id="animatedTheme"
+    class="animated-theme"
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="metadata"
+    aria-hidden="true"
+  ></video>
+
+  <div
+    id="animatedThemeOverlay"
+    class="animated-theme-overlay"
+    aria-hidden="true"
+  ></div>
+
+
   <main>
 
     <header>
+
       <div>
         <h1>ROLETA</h1>
-        <p class="sub">Decision engine — projetos primeiro, distrações depois.</p>
+        <p class="sub">
+          Decision engine — projetos primeiro, distrações depois.
+        </p>
       </div>
 
       <div class="header-controls">
 
-        <div class="visual-tabs" role="tablist" aria-label="Configurações visuais">
+        <div
+          class="visual-tabs"
+          role="tablist"
+          aria-label="Configurações visuais"
+        >
+
           <button
             type="button"
             class="visual-tab active"
@@ -34,6 +65,15 @@
           >
             Visual
           </button>
+
+          <button
+            type="button"
+            class="visual-tab"
+            data-tab="animated"
+          >
+            Animated
+          </button>
+
         </div>
 
         <div class="small muted">
@@ -41,8 +81,13 @@
         </div>
 
       </div>
+
     </header>
 
+
+    <!-- ==================================================
+         VISUAL
+         ================================================== -->
 
     <div id="visualPanel" class="visual-panel hidden">
 
@@ -54,11 +99,35 @@
         </div>
 
         <div class="visual-options">
-          <button type="button" class="visual-option" data-theme-option="midnight">Midnight</button>
-          <button type="button" class="visual-option" data-theme-option="dark">Dark</button>
-          <button type="button" class="visual-option" data-theme-option="light">Light</button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-theme-option="midnight"
+          >
+            Midnight
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-theme-option="dark"
+          >
+            Dark
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-theme-option="light"
+          >
+            Light
+          </button>
+
         </div>
+
       </div>
+
 
       <div class="visual-section">
 
@@ -68,12 +137,35 @@
         </div>
 
         <div class="visual-options">
-          <button type="button" class="visual-option" data-sharpness-option="soft">Soft</button>
-          <button type="button" class="visual-option" data-sharpness-option="balanced">Balanced</button>
-          <button type="button" class="visual-option" data-sharpness-option="crisp">Crisp</button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-sharpness-option="soft"
+          >
+            Soft
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-sharpness-option="balanced"
+          >
+            Balanced
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-sharpness-option="crisp"
+          >
+            Crisp
+          </button>
+
         </div>
 
       </div>
+
 
       <div class="visual-section">
 
@@ -83,9 +175,31 @@
         </div>
 
         <div class="visual-options">
-          <button type="button" class="visual-option" data-animation-option="static">Static</button>
-          <button type="button" class="visual-option" data-animation-option="ambient">Ambient</button>
-          <button type="button" class="visual-option" data-animation-option="cinematic">Cinematic</button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-animation-option="static"
+          >
+            Static
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-animation-option="ambient"
+          >
+            Ambient
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-animation-option="cinematic"
+          >
+            Cinematic
+          </button>
+
         </div>
 
       </div>
@@ -93,41 +207,149 @@
     </div>
 
 
+    <!-- ==================================================
+         ANIMATED THEMES
+         ================================================== -->
+
+    <div id="animatedPanel" class="visual-panel hidden">
+
+      <div class="visual-section">
+
+        <div>
+          <div class="small muted">Animated Theme</div>
+          <strong>Wallpaper externo</strong>
+        </div>
+
+        <div class="visual-options">
+
+          <button
+            type="button"
+            class="visual-option"
+            id="animatedThemeToggle"
+          >
+            Ativar
+          </button>
+
+          <button
+            type="button"
+            class="visual-option active"
+            id="animatedThemeDefault"
+          >
+            Minecraft Night
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <div class="visual-section animated-url-section">
+
+        <div>
+          <div class="small muted">Fonte</div>
+          <strong>URL do vídeo</strong>
+        </div>
+
+        <div class="animated-url-control">
+
+          <input
+            id="animatedThemeUrl"
+            type="url"
+            placeholder="https://..."
+            autocomplete="off"
+          >
+
+          <button
+            type="button"
+            class="primary"
+            id="animatedThemeApply"
+          >
+            Aplicar
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <div class="visual-section">
+
+        <div>
+          <div class="small muted">Estado</div>
+          <strong id="animatedThemeStatus">
+            Desativado
+          </strong>
+        </div>
+
+        <div class="small muted">
+          Vídeo externo · loop · muted
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         ROLETA
+         ================================================== -->
+
     <div id="roulettePanel">
 
       <div class="grid">
 
-        <!-- CATEGORIAS -->
         <section class="panel">
+
           <h2>Categorias</h2>
 
           <div id="cats" class="cats"></div>
 
-          <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+          <hr
+            style="border:0;border-top:1px solid var(--line);margin:18px 0"
+          >
 
-          <div class="small muted">Ciclo atual</div>
-          <div id="progress" style="margin-top:5px"></div>
+          <div class="small muted">
+            Ciclo atual
+          </div>
+
+          <div
+            id="progress"
+            style="margin-top:5px"
+          ></div>
+
         </section>
 
 
-        <!-- ROLETAS -->
         <section class="panel">
 
           <div class="row between">
+
             <div>
-              <div class="small muted">Categoria selecionada</div>
-              <h2 id="title">Jogos</h2>
-              <div id="count" class="small muted"></div>
+
+              <div class="small muted">
+                Categoria selecionada
+              </div>
+
+              <h2 id="title">
+                Jogos
+              </h2>
+
+              <div
+                id="count"
+                class="small muted"
+              ></div>
+
             </div>
 
             <button id="resetCycle">
               ↻ Novo ciclo
             </button>
+
           </div>
 
 
-          <!-- ADICIONAR OPÇÃO -->
           <form id="addForm">
+
             <input
               id="newItem"
               placeholder="Adicionar opção..."
@@ -137,40 +359,56 @@
             <button class="primary">
               + Adicionar
             </button>
+
           </form>
 
 
-          <!-- LISTA -->
-          <div id="list" class="list"></div>
+          <div
+            id="list"
+            class="list"
+          ></div>
 
 
-          <!-- ROLETA -->
-          <div class="center" style="margin-top:18px">
+          <div
+            class="center"
+            style="margin-top:18px"
+          >
 
             <div class="wheel-wrap">
+
               <div class="pointer"></div>
-              <div id="wheel" class="wheel"></div>
+
+              <div
+                id="wheel"
+                class="wheel"
+              ></div>
+
             </div>
 
 
-            <!-- GIRAR -->
             <button
               id="spin"
               class="primary"
               style="font-size:17px;padding:12px 28px"
             >
-              🎲 GIRAR
+              GIRAR
             </button>
 
 
-            <!-- RESULTADO -->
-            <div id="result" class="result">
-              <span class="muted">Nenhum resultado.</span>
+            <div
+              id="result"
+              class="result"
+            >
+              <span class="muted">
+                Nenhum resultado.
+              </span>
             </div>
 
 
-            <!-- AÇÕES DO RESULTADO -->
-            <div id="resultActions" class="actions hidden">
+            <div
+              id="resultActions"
+              class="actions hidden"
+            >
 
               <button id="confirm">
                 ✓ Confirmar
@@ -200,80 +438,490 @@
   <script src="js/app.js"></script>
 
 
-  <!-- Sistema visual independente do app.js -->
+  <!-- ==================================================
+       SISTEMA VISUAL
+       ================================================== -->
+
   <script>
     (() => {
-      const THEME_KEY = "einzbern-roulette-theme";
-      const SHARPNESS_KEY = "einzbern-roulette-sharpness";
-      const ANIMATION_KEY = "einzbern-roulette-animation";
 
-      const root = document.documentElement;
-      const tabs = document.querySelectorAll(".visual-tab");
-      const roulettePanel = document.getElementById("roulettePanel");
-      const visualPanel = document.getElementById("visualPanel");
-      const themeOptions = document.querySelectorAll("[data-theme-option]");
-      const sharpnessOptions = document.querySelectorAll("[data-sharpness-option]");
-      const animationOptions = document.querySelectorAll("[data-animation-option]");
+      const THEME_KEY =
+        "einzbern-roulette-theme";
+
+      const SHARPNESS_KEY =
+        "einzbern-roulette-sharpness";
+
+      const ANIMATION_KEY =
+        "einzbern-roulette-animation";
+
+      const ANIMATED_KEY =
+        "einzbern-roulette-animated-theme";
+
+      const ANIMATED_URL_KEY =
+        "einzbern-roulette-animated-url";
+
+
+      const DEFAULT_ANIMATED_URL =
+        "https://motionbgs.com/dl/hd/3668";
+
+
+      const root =
+        document.documentElement;
+
+      const tabs =
+        document.querySelectorAll(".visual-tab");
+
+      const roulettePanel =
+        document.getElementById("roulettePanel");
+
+      const visualPanel =
+        document.getElementById("visualPanel");
+
+      const animatedPanel =
+        document.getElementById("animatedPanel");
+
+
+      const themeOptions =
+        document.querySelectorAll(
+          "[data-theme-option]"
+        );
+
+      const sharpnessOptions =
+        document.querySelectorAll(
+          "[data-sharpness-option]"
+        );
+
+      const animationOptions =
+        document.querySelectorAll(
+          "[data-animation-option]"
+        );
+
+
+      const animatedTheme =
+        document.getElementById(
+          "animatedTheme"
+        );
+
+      const animatedThemeToggle =
+        document.getElementById(
+          "animatedThemeToggle"
+        );
+
+      const animatedThemeDefault =
+        document.getElementById(
+          "animatedThemeDefault"
+        );
+
+      const animatedThemeUrl =
+        document.getElementById(
+          "animatedThemeUrl"
+        );
+
+      const animatedThemeApply =
+        document.getElementById(
+          "animatedThemeApply"
+        );
+
+      const animatedThemeStatus =
+        document.getElementById(
+          "animatedThemeStatus"
+        );
+
 
       function applyTheme(theme) {
-        const valid = ["midnight", "dark", "light"];
-        if (!valid.includes(theme)) theme = "midnight";
-        root.dataset.theme = theme;
-        localStorage.setItem(THEME_KEY, theme);
+
+        const valid = [
+          "midnight",
+          "dark",
+          "light"
+        ];
+
+        if (!valid.includes(theme)) {
+          theme = "midnight";
+        }
+
+        root.dataset.theme =
+          theme;
+
+        localStorage.setItem(
+          THEME_KEY,
+          theme
+        );
+
         themeOptions.forEach(button => {
-          button.classList.toggle("active", button.dataset.themeOption === theme);
+
+          button.classList.toggle(
+            "active",
+            button.dataset.themeOption === theme
+          );
+
         });
+
       }
+
 
       function applySharpness(sharpness) {
-        const valid = ["soft", "balanced", "crisp"];
-        if (!valid.includes(sharpness)) sharpness = "balanced";
-        root.dataset.sharpness = sharpness;
-        localStorage.setItem(SHARPNESS_KEY, sharpness);
+
+        const valid = [
+          "soft",
+          "balanced",
+          "crisp"
+        ];
+
+        if (!valid.includes(sharpness)) {
+          sharpness = "balanced";
+        }
+
+        root.dataset.sharpness =
+          sharpness;
+
+        localStorage.setItem(
+          SHARPNESS_KEY,
+          sharpness
+        );
+
         sharpnessOptions.forEach(button => {
-          button.classList.toggle("active", button.dataset.sharpnessOption === sharpness);
+
+          button.classList.toggle(
+            "active",
+            button.dataset.sharpnessOption === sharpness
+          );
+
         });
+
       }
+
 
       function applyAnimation(animation) {
-        const valid = ["static", "ambient", "cinematic"];
-        if (!valid.includes(animation)) animation = "ambient";
-        root.dataset.animation = animation;
-        localStorage.setItem(ANIMATION_KEY, animation);
+
+        const valid = [
+          "static",
+          "ambient",
+          "cinematic"
+        ];
+
+        if (!valid.includes(animation)) {
+          animation = "ambient";
+        }
+
+        root.dataset.animation =
+          animation;
+
+        localStorage.setItem(
+          ANIMATION_KEY,
+          animation
+        );
+
         animationOptions.forEach(button => {
-          button.classList.toggle("active", button.dataset.animationOption === animation);
+
+          button.classList.toggle(
+            "active",
+            button.dataset.animationOption === animation
+          );
+
         });
+
       }
 
-      tabs.forEach(tab => {
-        tab.addEventListener("click", () => {
-          const visualActive = tab.dataset.tab === "visual";
-          tabs.forEach(item => item.classList.toggle("active", item === tab));
-          roulettePanel.classList.toggle("hidden", visualActive);
-          visualPanel.classList.toggle("hidden", !visualActive);
-          if (visualActive) {
-            visualPanel.classList.remove("visual-panel-enter");
-            void visualPanel.offsetWidth;
-            visualPanel.classList.add("visual-panel-enter");
-          }
+
+      function setPanel(panel) {
+
+        roulettePanel.classList.toggle(
+          "hidden",
+          panel !== "roulette"
+        );
+
+        visualPanel.classList.toggle(
+          "hidden",
+          panel !== "visual"
+        );
+
+        animatedPanel.classList.toggle(
+          "hidden",
+          panel !== "animated"
+        );
+
+        tabs.forEach(tab => {
+
+          tab.classList.toggle(
+            "active",
+            tab.dataset.tab === panel
+          );
+
         });
+
+        const target =
+          panel === "visual"
+            ? visualPanel
+            : panel === "animated"
+              ? animatedPanel
+              : null;
+
+        if (target) {
+
+          target.classList.remove(
+            "visual-panel-enter"
+          );
+
+          void target.offsetWidth;
+
+          target.classList.add(
+            "visual-panel-enter"
+          );
+
+        }
+
+      }
+
+
+      tabs.forEach(tab => {
+
+        tab.addEventListener(
+          "click",
+          () => setPanel(
+            tab.dataset.tab
+          )
+        );
+
       });
+
 
       sharpnessOptions.forEach(button => {
-        button.addEventListener("click", () => applySharpness(button.dataset.sharpnessOption));
+
+        button.addEventListener(
+          "click",
+          () => applySharpness(
+            button.dataset.sharpnessOption
+          )
+        );
+
       });
+
 
       animationOptions.forEach(button => {
-        button.addEventListener("click", () => applyAnimation(button.dataset.animationOption));
+
+        button.addEventListener(
+          "click",
+          () => applyAnimation(
+            button.dataset.animationOption
+          )
+        );
+
       });
+
 
       themeOptions.forEach(button => {
-        button.addEventListener("click", () => applyTheme(button.dataset.themeOption));
+
+        button.addEventListener(
+          "click",
+          () => applyTheme(
+            button.dataset.themeOption
+          )
+        );
+
       });
 
-      applyTheme(localStorage.getItem(THEME_KEY) || "midnight");
-      applySharpness(localStorage.getItem(SHARPNESS_KEY) || "balanced");
-      applyAnimation(localStorage.getItem(ANIMATION_KEY) || "ambient");
+
+      function updateAnimatedStatus(active) {
+
+        animatedThemeStatus.textContent =
+          active
+            ? "Ativado"
+            : "Desativado";
+
+        animatedThemeToggle.textContent =
+          active
+            ? "Desativar"
+            : "Ativar";
+
+        animatedThemeToggle.classList.toggle(
+          "active",
+          active
+        );
+
+      }
+
+
+      function applyAnimatedTheme(url) {
+
+        if (!url) return;
+
+        animatedTheme.src = url;
+
+        animatedTheme.load();
+
+        animatedTheme.play()
+          .catch(() => {});
+
+        root.dataset.animated =
+          "active";
+
+        localStorage.setItem(
+          ANIMATED_URL_KEY,
+          url
+        );
+
+        localStorage.setItem(
+          ANIMATED_KEY,
+          "true"
+        );
+
+        updateAnimatedStatus(true);
+
+      }
+
+
+      function disableAnimatedTheme() {
+
+        animatedTheme.pause();
+
+        animatedTheme.removeAttribute(
+          "src"
+        );
+
+        animatedTheme.load();
+
+        root.dataset.animated =
+          "inactive";
+
+        localStorage.setItem(
+          ANIMATED_KEY,
+          "false"
+        );
+
+        updateAnimatedStatus(false);
+
+      }
+
+
+      animatedThemeToggle.addEventListener(
+        "click",
+        () => {
+
+          const active =
+            root.dataset.animated === "active";
+
+          if (active) {
+
+            disableAnimatedTheme();
+
+          } else {
+
+            const url =
+              animatedThemeUrl.value.trim() ||
+              DEFAULT_ANIMATED_URL;
+
+            applyAnimatedTheme(url);
+
+          }
+
+        }
+      );
+
+
+      animatedThemeDefault.addEventListener(
+        "click",
+        () => {
+
+          animatedThemeUrl.value =
+            DEFAULT_ANIMATED_URL;
+
+          applyAnimatedTheme(
+            DEFAULT_ANIMATED_URL
+          );
+
+        }
+      );
+
+
+      animatedThemeApply.addEventListener(
+        "click",
+        () => {
+
+          const url =
+            animatedThemeUrl.value.trim();
+
+          if (!url) return;
+
+          applyAnimatedTheme(url);
+
+        }
+      );
+
+
+      animatedThemeUrl.addEventListener(
+        "keydown",
+        event => {
+
+          if (event.key === "Enter") {
+
+            event.preventDefault();
+
+            animatedThemeApply.click();
+
+          }
+
+        }
+      );
+
+
+      animatedTheme.addEventListener(
+        "error",
+        () => {
+
+          animatedThemeStatus.textContent =
+            "Falha ao carregar";
+
+        }
+      );
+
+
+      applyTheme(
+        localStorage.getItem(
+          THEME_KEY
+        ) || "midnight"
+      );
+
+      applySharpness(
+        localStorage.getItem(
+          SHARPNESS_KEY
+        ) || "balanced"
+      );
+
+      applyAnimation(
+        localStorage.getItem(
+          ANIMATION_KEY
+        ) || "ambient"
+      );
+
+
+      const savedAnimatedUrl =
+        localStorage.getItem(
+          ANIMATED_URL_KEY
+        ) || DEFAULT_ANIMATED_URL;
+
+      animatedThemeUrl.value =
+        savedAnimatedUrl;
+
+
+      const savedAnimatedState =
+        localStorage.getItem(
+          ANIMATED_KEY
+        ) === "true";
+
+
+      if (savedAnimatedState) {
+
+        applyAnimatedTheme(
+          savedAnimatedUrl
+        );
+
+      } else {
+
+        updateAnimatedStatus(false);
+
+      }
+
     })();
   </script>
 

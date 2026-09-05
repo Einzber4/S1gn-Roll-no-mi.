@@ -885,6 +885,153 @@ form{
     transition:none;
   }
 }
-=====================================================================================================================================================================================================
-* Então ele rogou diante de mim: "Senhor, tu sabes o que é melhor para mim. Eu confio em ti e aceito tua vontade. Que eu possa encontrar paz e força em tua presença, mesmo nos momentos de incerteza."
-======================================================================================================================================================================================================
+/* ==================================================
+   ANIMATED THEMES
+   ================================================== */
+
+.animated-theme{
+  position:fixed;
+  inset:0;
+
+  width:100%;
+  height:100%;
+
+  object-fit:cover;
+
+  z-index:-3;
+
+  opacity:0;
+
+  pointer-events:none;
+
+  background:#090b10;
+
+  transition:
+    opacity 700ms ease;
+}
+
+
+html[data-animated="active"] .animated-theme{
+  opacity:1;
+}
+
+
+.animated-theme-overlay{
+  position:fixed;
+  inset:0;
+
+  z-index:-2;
+
+  pointer-events:none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(5,7,11,.48),
+      rgba(5,7,11,.72)
+    );
+
+  opacity:0;
+
+  transition:
+    opacity 700ms ease;
+}
+
+
+html[data-animated="active"]
+.animated-theme-overlay{
+  opacity:1;
+}
+
+
+/* ==================================================
+   ANIMATED THEME — INTERFACE
+   ================================================== */
+
+.animated-url-control{
+  display:flex;
+  gap:8px;
+  width:min(560px,100%);
+}
+
+
+.animated-url-control input{
+  flex:1;
+  min-width:0;
+}
+
+
+html[data-animated="active"]
+.panel,
+html[data-animated="active"]
+.visual-section{
+  backdrop-filter:blur(4px);
+}
+
+
+html[data-animated="active"]
+.wheel{
+  box-shadow:
+    0 0 0 2px #080a0e,
+    0 20px 60px #0009,
+    0 0 40px rgba(142,168,255,.08);
+}
+
+
+/* ==================================================
+   ANIMATED THEME — TRANSIÇÃO
+   ================================================== */
+
+html[data-animated="active"]
+main{
+  animation:
+    animatedInterfaceEnter
+    600ms
+    ease
+    both;
+}
+
+
+@keyframes animatedInterfaceEnter{
+
+  from{
+    opacity:.94;
+  }
+
+  to{
+    opacity:1;
+  }
+
+}
+
+
+/* ==================================================
+   ANIMATED THEME — REDUÇÃO DE MOVIMENTO
+   ================================================== */
+
+@media (prefers-reduced-motion:reduce){
+
+  .animated-theme{
+    transition:none;
+  }
+
+  .animated-theme-overlay{
+    transition:none;
+  }
+
+  html[data-animated="active"]
+  main{
+    animation:none;
+  }
+
+}
+
+
+@media (max-width:760px){
+
+  .animated-url-control{
+    width:100%;
+    flex-direction:column;
+  }
+
+}
