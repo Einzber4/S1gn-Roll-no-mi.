@@ -646,7 +646,6 @@ form{
 
   margin:15px auto;
 }
-
 .wheel{
   position:relative;
 
@@ -657,12 +656,10 @@ form{
   border:8px solid #222a36;
 
   background:
-    conic-gradient(
-      #8ea8ff 0deg 72deg,
-      #566b9e 72deg 144deg,
-      #9aadd8 144deg 216deg,
-      #485a86 216deg 288deg,
-      #b0bee0 288deg 360deg
+    radial-gradient(
+      circle,
+      #171c25 0%,
+      #0c1016 100%
     );
 
   box-shadow:
@@ -673,6 +670,32 @@ form{
     transform 3.2s cubic-bezier(.12,.72,.08,1);
 
   overflow:hidden;
+}
+
+/* ==================================================
+   DIVISÓRIAS DOS SETORES
+   ================================================== */
+
+.wheel::after{
+  content:"";
+
+  position:absolute;
+  inset:0;
+
+  border-radius:50%;
+
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent calc(72deg - 1deg),
+      rgba(8,10,14,.72) calc(72deg - 1deg),
+      rgba(8,10,14,.72) 72deg
+    );
+
+  pointer-events:none;
+
+  z-index:2;
 }
 
 /* ==================================================
