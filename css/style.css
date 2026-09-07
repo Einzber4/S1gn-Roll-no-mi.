@@ -1058,3 +1058,70 @@ main{
   }
 
 }
+/* ==================================================
+   ANIMATED THEMES — External Layer
+   ================================================== */
+
+.animated-theme-stage{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  overflow:hidden;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 700ms ease;
+}
+
+.animated-theme-stage.active{
+  opacity:1;
+}
+
+.animated-theme-video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  pointer-events:none;
+}
+
+.animated-theme-overlay{
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(9,11,16,.72),
+      rgba(9,11,16,.48) 45%,
+      rgba(9,11,16,.78)
+    );
+  pointer-events:none;
+}
+
+html[data-animated-theme="active"] body{
+  background:
+    linear-gradient(
+      rgba(9,11,16,.18),
+      rgba(9,11,16,.18)
+    );
+}
+
+.animated-theme-stage.hidden{
+  display:none;
+}
+
+@media (prefers-reduced-motion:reduce){
+  .animated-theme-stage{
+    display:none;
+  }
+
+  html[data-animated-theme="active"] body{
+    background:
+      radial-gradient(
+        circle at 50% 0,
+        #171d2a 0,
+        #090b10 45%
+      );
+  }
+}
