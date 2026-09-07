@@ -238,6 +238,38 @@
             Minecraft Night
           </button>
 
+          <button
+            type="button"
+            class="visual-option"
+            data-animated-preset="rain"
+          >
+            Rain
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-animated-preset="aurora"
+          >
+            Aurora
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            data-animated-preset="void"
+          >
+            Void
+          </button>
+
+          <button
+            type="button"
+            class="visual-option"
+            id="animatedThemeHumidRainy"
+          >
+            Humid Rainy Street
+          </button>
+
         </div>
 
       </div>
@@ -460,9 +492,15 @@
       const ANIMATED_URL_KEY =
         "einzbern-roulette-animated-url";
 
+      const ANIMATED_PRESET_KEY =
+        "einzbern-roulette-animated-preset";
+
 
       const DEFAULT_ANIMATED_URL =
         "https://motionbgs.com/dl/hd/3668";
+
+      const HUMID_RAINY_STREET_URL =
+        "assets/animated/humid-rainy-street-neverness-to-everness.mp4";
 
 
       const root =
@@ -510,6 +548,16 @@
       const animatedThemeDefault =
         document.getElementById(
           "animatedThemeDefault"
+        );
+
+      const animatedThemeHumidRainy =
+        document.getElementById(
+          "animatedThemeHumidRainy"
+        );
+
+      const animatedPresetOptions =
+        document.querySelectorAll(
+          "[data-animated-preset]"
         );
 
       const animatedThemeUrl =
@@ -742,11 +790,39 @@
       }
 
 
-      function applyAnimatedTheme(url) {
+      function setAnimatedPreset(activePreset) {
+
+        animatedPresetOptions.forEach(button => {
+
+          button.classList.toggle(
+            "active",
+            button.dataset.animatedPreset === activePreset
+          );
+
+        });
+
+        animatedThemeDefault.classList.toggle(
+          "active",
+          activePreset === "minecraft"
+        );
+
+        animatedThemeHumidRainy.classList.toggle(
+          "active",
+          activePreset === "humid-rainy-street"
+        );
+
+      }
+
+
+      function applyAnimatedTheme(
+        url,
+        preset = null
+      ) {
 
         if (!url) return;
 
-        animatedTheme.src = url;
+        animatedTheme.src =
+          url;
 
         animatedTheme.load();
 
@@ -766,7 +842,31 @@
           "true"
         );
 
-        updateAnimatedStatus(true);
+        if (preset) {
+
+          localStorage.setItem(
+            ANIMATED_PRESET_KEY,
+            preset
+          );
+
+        } else {
+
+          localStorage.removeItem(
+            ANIMATED_PRESET_KEY
+          );
+
+        }
+
+        root.dataset.animatedPreset =
+          preset || "";
+
+        setAnimatedPreset(
+          preset || null
+        );
+
+        updateAnimatedStatus(
+          true
+        );
 
       }
 
@@ -789,7 +889,9 @@
           "false"
         );
 
-        updateAnimatedStatus(false);
+        updateAnimatedStatus(
+          false
+        );
 
       }
 
@@ -811,7 +913,9 @@
               animatedThemeUrl.value.trim() ||
               DEFAULT_ANIMATED_URL;
 
-            applyAnimatedTheme(url);
+            applyAnimatedTheme(
+              url
+            );
 
           }
 
@@ -827,7 +931,73 @@
             DEFAULT_ANIMATED_URL;
 
           applyAnimatedTheme(
-            DEFAULT_ANIMATED_URL
+            DEFAULT_ANIMATED_URL,
+            "minecraft"
+          );
+
+        }
+      );
+
+
+      animatedThemeHumidRainy.addEventListener(
+        "click",
+        () => {
+
+          animatedThemeUrl.value =
+            HUMID_RAINY_STREET_URL;
+
+          applyAnimatedTheme(
+            HUMID_RAINY_STREET_URL,
+            "humid-rainy-street"
+          );
+
+        }
+      );
+
+
+      animatedPresetOptions.forEach(
+        button => {
+
+          button.addEventListener(
+            "click",
+            () => {
+
+              const preset =
+                button.dataset.animatedPreset;
+
+              root.dataset.animatedPreset =
+                preset;
+
+              localStorage.setItem(
+                ANIMATED_PRESET_KEY,
+                preset
+              );
+
+              localStorage.setItem(
+                ANIMATED_KEY,
+                "true"
+              );
+
+              animatedTheme.pause();
+
+              animatedTheme.removeAttribute(
+                "src"
+              );
+
+              animatedTheme.load();
+
+              root.dataset.animated =
+                "active";
+
+              setAnimatedPreset(
+                preset
+              );
+
+              updateAnimatedStatus(
+                true
+              );
+
+            }
           );
 
         }
@@ -843,7 +1013,9 @@
 
           if (!url) return;
 
-          applyAnimatedTheme(url);
+          applyAnimatedTheme(
+            url
+          );
 
         }
       );
@@ -909,8 +1081,56 @@
           ANIMATED_KEY
         ) === "true";
 
+      const savedAnimatedPreset =
+        localStorage.getItem(
+          ANIMATED_PRESET_KEY
+        );
 
-      if (savedAnimatedState) {
+
+      if (
+        savedAnimatedState &&
+        savedAnimatedPreset
+      ) {
+
+        root.dataset.animatedPreset =
+          savedAnimatedPreset;
+
+        root.dataset.animated =
+          "active";
+
+        setAnimatedPreset(
+          savedAnimatedPreset
+        );
+
+        updateAnimatedStatus(
+          true
+        );
+
+        if (
+          savedAnimatedPreset ===
+          "minecraft"
+        ) {
+
+          applyAnimatedTheme(
+            savedAnimatedUrl,
+            "minecraft"
+          );
+
+        } else if (
+          savedAnimatedPreset ===
+          "humid-rainy-street"
+        ) {
+
+          applyAnimatedTheme(
+            HUMID_RAINY_STREET_URL,
+            "humid-rainy-street"
+          );
+
+        }
+
+      } else if (
+        savedAnimatedState
+      ) {
 
         applyAnimatedTheme(
           savedAnimatedUrl
@@ -918,7 +1138,9 @@
 
       } else {
 
-        updateAnimatedStatus(false);
+        updateAnimatedStatus(
+          false
+        );
 
       }
 

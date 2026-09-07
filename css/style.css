@@ -1125,3 +1125,32 @@ html[data-animated-theme="active"] body{
       );
   }
 }
+
+/* ==================================================
+   ANIMATED THEMES — BUILT-IN PRESETS
+   ================================================== */
+html[data-animated="active"][data-animated-preset="rain"] body::before{background:repeating-linear-gradient(105deg,rgba(142,168,255,.10) 0 1px,transparent 1px 18px),linear-gradient(180deg,rgba(10,18,34,.10),rgba(5,8,14,.58));animation:rainAtmosphere 900ms linear infinite;}
+html[data-animated="active"][data-animated-preset="rain"] body::after{background:radial-gradient(circle at 18% 20%,rgba(142,168,255,.12),transparent 24%),radial-gradient(circle at 80% 70%,rgba(70,105,170,.08),transparent 30%);animation:rainGlow 7s ease-in-out infinite alternate;}
+@keyframes rainAtmosphere{from{transform:translate3d(0,-18px,0);}to{transform:translate3d(-18px,18px,0);}}
+@keyframes rainGlow{from{opacity:.55;}to{opacity:1;}}
+
+html[data-animated="active"][data-animated-preset="aurora"] body::before{background:radial-gradient(ellipse at 25% 35%,rgba(98,130,255,.16),transparent 38%),radial-gradient(ellipse at 75% 30%,rgba(120,92,190,.13),transparent 36%),radial-gradient(ellipse at 50% 85%,rgba(75,110,170,.10),transparent 42%);animation:auroraDrift 16s ease-in-out infinite alternate;}
+html[data-animated="active"][data-animated-preset="aurora"] body::after{background:linear-gradient(120deg,transparent 18%,rgba(142,168,255,.055) 42%,rgba(145,105,190,.045) 58%,transparent 82%);background-size:180% 180%;animation:auroraSweep 12s ease-in-out infinite alternate;}
+@keyframes auroraDrift{from{transform:scale(1) translate3d(-12px,4px,0);}to{transform:scale(1.08) translate3d(14px,-8px,0);}}
+@keyframes auroraSweep{from{background-position:0% 50%;opacity:.55;}to{background-position:100% 50%;opacity:1;}}
+
+html[data-animated="active"][data-animated-preset="void"] body::before{background:radial-gradient(circle at 50% 45%,rgba(142,168,255,.045),transparent 28%),radial-gradient(circle at 20% 80%,rgba(85,85,115,.035),transparent 30%);animation:voidPulse 11s ease-in-out infinite alternate;}
+html[data-animated="active"][data-animated-preset="void"] body::after{background:linear-gradient(115deg,transparent,rgba(255,255,255,.018),transparent);animation:voidSweep 13s linear infinite;}
+@keyframes voidPulse{from{transform:scale(1);opacity:.55;}to{transform:scale(1.035);opacity:1;}}
+@keyframes voidSweep{from{transform:translateX(-12%);}to{transform:translateX(12%);}}
+
+html[data-animated="active"][data-animated-preset="rain"] .panel,
+html[data-animated="active"][data-animated-preset="aurora"] .panel,
+html[data-animated="active"][data-animated-preset="void"] .panel,
+html[data-animated="active"][data-animated-preset="rain"] .visual-section,
+html[data-animated="active"][data-animated-preset="aurora"] .visual-section,
+html[data-animated="active"][data-animated-preset="void"] .visual-section{backdrop-filter:blur(7px);}
+
+@media (prefers-reduced-motion:reduce){
+html[data-animated="active"][data-animated-preset="rain"] body::before,html[data-animated="active"][data-animated-preset="rain"] body::after,html[data-animated="active"][data-animated-preset="aurora"] body::before,html[data-animated="active"][data-animated-preset="aurora"] body::after,html[data-animated="active"][data-animated-preset="void"] body::before,html[data-animated="active"][data-animated-preset="void"] body::after{animation:none;transform:none;}
+}
