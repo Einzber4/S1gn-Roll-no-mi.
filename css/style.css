@@ -1154,3 +1154,6 @@ html[data-animated="active"][data-animated-preset="void"] .visual-section{backdr
 @media (prefers-reduced-motion:reduce){
 html[data-animated="active"][data-animated-preset="rain"] body::before,html[data-animated="active"][data-animated-preset="rain"] body::after,html[data-animated="active"][data-animated-preset="aurora"] body::before,html[data-animated="active"][data-animated-preset="aurora"] body::after,html[data-animated="active"][data-animated-preset="void"] body::before,html[data-animated="active"][data-animated-preset="void"] body::after{animation:none;transform:none;}
 }
+========================================================================
+Então ele rogou diante de mim: Nada é impossível para Deus. — Lucas 1:37
+========================================================================
