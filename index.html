@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Roleta — Decision Engine</title>
+  <title>F4ke R0ll no mi.</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -36,11 +36,15 @@
     <header>
 
       <div>
-        <h1>ROLETA</h1>
+
+        <h1>F4ke R0ll no mi.</h1>
+
         <p class="sub">
           Decision engine — projetos primeiro, distrações depois.
         </p>
+
       </div>
+
 
       <div class="header-controls">
 
@@ -160,6 +164,28 @@
             data-sharpness-option="crisp"
           >
             Crisp
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <div class="visual-section">
+
+        <div>
+          <div class="small muted">Interface</div>
+          <strong>Clean UI</strong>
+        </div>
+
+        <div class="visual-options">
+
+          <button
+            type="button"
+            class="visual-option"
+            id="cleanUiToggle"
+          >
+            Ativar
           </button>
 
         </div>
@@ -308,9 +334,11 @@
 
         <div>
           <div class="small muted">Estado</div>
+
           <strong id="animatedThemeStatus">
             Desativado
           </strong>
+
         </div>
 
         <div class="small muted">
@@ -475,6 +503,7 @@
        ================================================== -->
 
   <script>
+
     (() => {
 
       const THEME_KEY =
@@ -486,14 +515,14 @@
       const ANIMATION_KEY =
         "einzbern-roulette-animation";
 
+      const CLEAN_UI_KEY =
+        "einzbern-roulette-clean-ui";
+
       const ANIMATED_KEY =
         "einzbern-roulette-animated-theme";
 
       const ANIMATED_URL_KEY =
         "einzbern-roulette-animated-url";
-
-      const ANIMATED_PRESET_KEY =
-        "einzbern-roulette-animated-preset";
 
 
       const DEFAULT_ANIMATED_URL =
@@ -533,6 +562,9 @@
         document.querySelectorAll(
           "[data-animation-option]"
         );
+
+      const cleanUiToggle =
+        document.getElementById("cleanUiToggle");
 
 
       const animatedTheme =
@@ -636,6 +668,31 @@
           );
 
         });
+
+      }
+
+
+      function applyCleanUi(active) {
+
+        root.dataset.cleanUi =
+          active ? "active" : "inactive";
+
+        localStorage.setItem(
+          CLEAN_UI_KEY,
+          active ? "true" : "false"
+        );
+
+        if (cleanUiToggle) {
+
+          cleanUiToggle.classList.toggle(
+            "active",
+            active
+          );
+
+          cleanUiToggle.textContent =
+            active ? "Desativar" : "Ativar";
+
+        }
 
       }
 
@@ -758,6 +815,18 @@
       });
 
 
+      if (cleanUiToggle) {
+
+        cleanUiToggle.addEventListener(
+          "click",
+          () => applyCleanUi(
+            root.dataset.cleanUi !== "active"
+          )
+        );
+
+      }
+
+
       themeOptions.forEach(button => {
 
         button.addEventListener(
@@ -814,15 +883,11 @@
       }
 
 
-      function applyAnimatedTheme(
-        url,
-        preset = null
-      ) {
+      function applyAnimatedTheme(url, preset = null) {
 
         if (!url) return;
 
-        animatedTheme.src =
-          url;
+        animatedTheme.src = url;
 
         animatedTheme.load();
 
@@ -845,14 +910,14 @@
         if (preset) {
 
           localStorage.setItem(
-            ANIMATED_PRESET_KEY,
+            "einzbern-roulette-animated-preset",
             preset
           );
 
         } else {
 
           localStorage.removeItem(
-            ANIMATED_PRESET_KEY
+            "einzbern-roulette-animated-preset"
           );
 
         }
@@ -864,9 +929,7 @@
           preset || null
         );
 
-        updateAnimatedStatus(
-          true
-        );
+        updateAnimatedStatus(true);
 
       }
 
@@ -889,9 +952,7 @@
           "false"
         );
 
-        updateAnimatedStatus(
-          false
-        );
+        updateAnimatedStatus(false);
 
       }
 
@@ -913,9 +974,7 @@
               animatedThemeUrl.value.trim() ||
               DEFAULT_ANIMATED_URL;
 
-            applyAnimatedTheme(
-              url
-            );
+            applyAnimatedTheme(url);
 
           }
 
@@ -955,53 +1014,51 @@
       );
 
 
-      animatedPresetOptions.forEach(
-        button => {
+      animatedPresetOptions.forEach(button => {
 
-          button.addEventListener(
-            "click",
-            () => {
+        button.addEventListener(
+          "click",
+          () => {
 
-              const preset =
-                button.dataset.animatedPreset;
+            const preset =
+              button.dataset.animatedPreset;
 
-              root.dataset.animatedPreset =
-                preset;
+            root.dataset.animatedPreset =
+              preset;
 
-              localStorage.setItem(
-                ANIMATED_PRESET_KEY,
-                preset
-              );
+            localStorage.setItem(
+              "einzbern-roulette-animated-preset",
+              preset
+            );
 
-              localStorage.setItem(
-                ANIMATED_KEY,
-                "true"
-              );
+            localStorage.setItem(
+              ANIMATED_KEY,
+              "true"
+            );
 
-              animatedTheme.pause();
+            animatedTheme.pause();
 
-              animatedTheme.removeAttribute(
-                "src"
-              );
+            animatedTheme.removeAttribute(
+              "src"
+            );
 
-              animatedTheme.load();
+            animatedTheme.load();
 
-              root.dataset.animated =
-                "active";
+            root.dataset.animated =
+              "active";
 
-              setAnimatedPreset(
-                preset
-              );
+            setAnimatedPreset(
+              preset
+            );
 
-              updateAnimatedStatus(
-                true
-              );
+            updateAnimatedStatus(
+              true
+            );
 
-            }
-          );
+          }
+        );
 
-        }
-      );
+      });
 
 
       animatedThemeApply.addEventListener(
@@ -1013,9 +1070,7 @@
 
           if (!url) return;
 
-          applyAnimatedTheme(
-            url
-          );
+          applyAnimatedTheme(url);
 
         }
       );
@@ -1047,6 +1102,10 @@
         }
       );
 
+
+      applyCleanUi(
+        localStorage.getItem(CLEAN_UI_KEY) === "true"
+      );
 
       applyTheme(
         localStorage.getItem(
@@ -1083,7 +1142,7 @@
 
       const savedAnimatedPreset =
         localStorage.getItem(
-          ANIMATED_PRESET_KEY
+          "einzbern-roulette-animated-preset"
         );
 
 
@@ -1102,9 +1161,8 @@
           savedAnimatedPreset
         );
 
-        updateAnimatedStatus(
-          true
-        );
+        updateAnimatedStatus(true);
+
 
         if (
           savedAnimatedPreset ===
@@ -1128,9 +1186,7 @@
 
         }
 
-      } else if (
-        savedAnimatedState
-      ) {
+      } else if (savedAnimatedState) {
 
         applyAnimatedTheme(
           savedAnimatedUrl
@@ -1138,13 +1194,12 @@
 
       } else {
 
-        updateAnimatedStatus(
-          false
-        );
+        updateAnimatedStatus(false);
 
       }
 
     })();
+
   </script>
 
 </body>
